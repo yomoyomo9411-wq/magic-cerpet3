@@ -36,7 +36,6 @@ public class CarpetMove : MonoBehaviour
     public float minimumHitFeedbackIntensity = 0.55f;
     private float currentLife;
     public TMP_Text hpText;
-    private bool hpTextVisible;
     public GameObject goalText;
     public DamageFlash damageFlash;
 
@@ -79,8 +78,6 @@ public float hitObjectRemainSeconds = 2.0f;
         if (hpText != null)
         {
             UpdateLifeText();
-            hpText.gameObject.SetActive(false);
-            hpTextVisible = false;
         }
 
         if (cameraShakeScript == null && cameraObject != null)
@@ -102,7 +99,6 @@ public float hitObjectRemainSeconds = 2.0f;
             return;
         }
 
-        UpdateHpTextVisibility();
 
         if (!MagicCarpetGameFlow.IsCarpetMovementAllowed)
         {
@@ -337,44 +333,14 @@ public float hitObjectRemainSeconds = 2.0f;
         }
     }
 
-    void UpdateHpTextVisibility()
-    {
-        if (hpText == null)
-        {
-            return;
-        }
-
-        var shouldShow = MagicCarpetGameFlow.HasReachedMainStartLine;
-        if (hpTextVisible == shouldShow)
-        {
-            return;
-        }
-
-        if (shouldShow)
-        {
-            EnsureParentsVisible(hpText.gameObject);
-        }
-
-        hpText.gameObject.SetActive(shouldShow);
-        hpTextVisible = shouldShow;
-        UpdateLifeText();
-    }
-
-    void EnsureParentsVisible(GameObject target)
-    {
-        var parent = target.transform.parent;
-        while (parent != null)
-        {
-            parent.gameObject.SetActive(true);
-            parent = parent.parent;
-        }
-    }
-
     void UpdateLifeText()
     {
         if (hpText != null)
         {
             hpText.color = new Color32(30, 180, 70, 255);
+            hpText.enableWordWrapping = false;
+            hpText.overflowMode = TextOverflowModes.Overflow;
+            hpText.rectTransform.sizeDelta = new Vector2(1200f, 260f);
             hpText.text = "\u30E9\u30A4\u30D5:" + FormatLifeValue(currentLife) + "/" + FormatLifeValue(maxLife) + "\n" + BuildLifeHearts();
         }
     }
@@ -497,8 +463,6 @@ public float hitObjectRemainSeconds = 2.0f;
         if (hpText != null)
         {
             UpdateLifeText();
-            hpText.gameObject.SetActive(false);
-            hpTextVisible = false;
         }
 
         if (goalText != null)
