@@ -78,6 +78,7 @@ public float hitObjectRemainSeconds = 2.0f;
         if (hpText != null)
         {
             UpdateLifeText();
+            hpText.gameObject.SetActive(false);
         }
 
         if (cameraShakeScript == null && cameraObject != null)
@@ -225,6 +226,14 @@ public float hitObjectRemainSeconds = 2.0f;
     {
     }
 
+    public void SetHpVisible(bool visible)
+    {
+        if (hpText != null)
+        {
+            hpText.gameObject.SetActive(visible);
+        }
+    }
+
     void ReportTutorialBulletFailure(GameObject hitObject)
     {
         var reporter = hitObject.GetComponentInParent<TutorialBallResultReporter>();
@@ -337,11 +346,10 @@ public float hitObjectRemainSeconds = 2.0f;
     {
         if (hpText != null)
         {
-            hpText.color = new Color32(30, 180, 70, 255);
-            hpText.enableWordWrapping = false;
-            hpText.overflowMode = TextOverflowModes.Overflow;
-            hpText.rectTransform.sizeDelta = new Vector2(1200f, 260f);
-            hpText.text = "\u30E9\u30A4\u30D5:" + FormatLifeValue(currentLife) + "/" + FormatLifeValue(maxLife) + "\n" + BuildLifeHearts();
+            hpText.text =
+                "<color=#66FF66>ライフ:" + FormatLifeValue(currentLife) + "/" + FormatLifeValue(maxLife) + "</color>"
+                + "\n"
+                + BuildLifeHearts();
         }
     }
 
@@ -366,11 +374,11 @@ public float hitObjectRemainSeconds = 2.0f;
 
             if (i < fullHearts)
             {
-                builder.Append("<color=#ff4f6d>\u2665</color>");
+                builder.Append("<color=#FF3030>\u2764</color>");
             }
             else if (i == fullHearts && hasHalfHeart)
             {
-                builder.Append("<color=#ff9bad>\u2665</color>");
+                builder.Append("<color=#00000000>\u2764</color>");
             }
             else
             {

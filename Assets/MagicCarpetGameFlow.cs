@@ -359,6 +359,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
             mainGameStarted = true;
             SetMainStartObjectsVisible(true);
             ShowOnly(null);
+            var carpetMove = player != null ? player.GetComponent<CarpetMove>() : null;
+            if (carpetMove != null)
+            {
+                carpetMove.SetHpVisible(true);
+            }
             Time.timeScale = 1f;
             Debug.Log("Development start mode: main immediately.");
         }
@@ -491,6 +496,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
         waitingAtTitleScreen = false;
         SetMainStartObjectsVisible(true);
         ShowOnly(null);
+        var carpetMove = player != null ? player.GetComponent<CarpetMove>() : null;
+        if (carpetMove != null)
+        {
+            carpetMove.SetHpVisible(true);
+        }
         Time.timeScale = 1f;
 
         if (bgmSource != null && !bgmSource.isPlaying)
@@ -536,6 +546,12 @@ public class MagicCarpetGameFlow : MonoBehaviour
         SetMainStartObjectsVisible(false);
         ShowOnly(titleObject);
         Time.timeScale = 0f;
+
+        var carpetMove = player != null ? player.GetComponent<CarpetMove>() : null;
+        if (carpetMove != null)
+        {
+            carpetMove.SetHpVisible(false);
+        }
 
         if (bgmSource != null)
         {
