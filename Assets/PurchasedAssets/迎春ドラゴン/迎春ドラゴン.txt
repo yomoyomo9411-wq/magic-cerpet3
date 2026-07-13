@@ -1,0 +1,65 @@
+【商品名】
+　【無料】【3Dモデル】『迎春ドラゴン』 【VRchat対応】【Cluster対応】 
+
+【商品紹介】
+（VRChat)
+・龍（ドラゴン）のアバターです。
+・PC版、QUEST版が１つのunitypackageに同梱されています。
+・ボディカラーを５色変更することが出来ます（シェダー要因でPC版とQUEST版で色合いが違います）
+・声に合わせてリップシンクで口が動きます。表情も変更することが出来ます。
+・PC、Quest版ともに浮遊機能があります。浮遊をONにした場合ジャンプしたあと降下がゆっくりとなります。続けてジャンプするとより高く飛べるようになります。降りるときは浮遊機能をOFFにすると地面まで降下します。
+・本アバターはVRChatのpublicアバターとなっております。
+・PC版 △27,568 Good、QUEST版 △27,568 Very Poor（見えない方にはSHOW AVATARしてもらってください。Androidでは使えません）
+
+（Cluster)
+・VRChat版の色変え機能、浮遊機能は使用できません。
+・ダウンロードファイルに５色の個別VRMアバターが同梱されています。
+
+【内容物】
+・Unitypackage、迎春ドラゴン.txt（本ドキュメント）、VRMファイル
+
+【利用規約】
+[許可事項]
+・VRSNSでの利用、本モデルの画像・動画のSNS・動画投稿サイト等での利用（利用先の利用規約・コミュニティガイドライン遵守のこと）
+・改変、改変物の再配布・public化（他アセット利用時はアセットの製作者の利用規約を遵守のこと）
+・商用利用
+
+[禁止事項]
+・本モデル自体の再配布・public化
+・政治的、宗教的、犯罪行為、公序良俗に反する行為への利用
+
+[免責事項]
+・この配布物の使用によって生じた何らかのトラブル、損失に対し当方は一切責任を負いません。
+
+[使用アセット]
+・PC版はliltoonを使用しております。本unitypackageには含まれません。事前にインポートください。
+lilLab様 【無料】lilToon
+https://booth.pm/ja/items/3087170
+・CC0のmatcap、あるいは改変したmatcapを使用しています（unitypackage、VRMに含まれています）
+
+【導入方法】
+(VRChat）
+1.VRChat CreatorCompanion(VCC)からUnityの新規プロジェクトを作成し、liltoonをimportしてください。
+2.本データのDragon-V100.unitypackageをimportしてください。
+3.PC/PC_PrefabをHierarchyに配置してください。
+4.VRChat SDKパネルを開き、BuilderでSelected PlatformでWindowsを選択しOffline TestingのあとOnline Publishingをしてください。
+5.3.で配置したPC版をHierarchyから削除したうえ、QUEST/QUEST_PrefabをHierarchyに配置してください。このときPC_Prefabのblueprint IDをQUEST_Prefabのblueprint IDにコピーしてください。
+6.VRChat SDKパネルを開き、BuilderでSelected PlatformでAndroidを選択しOnline Publishingをしてください。
+
+(Cluster）
+・同梱のVRMファイルをPCブラウザにてClusterのアバターページから「アバターをアップロード」でアップロードしてください。
+
+【補足事項】
+・本アバターの使用においてはワールドやイベント、参加・面談される方々などを勘案の上使用いただくようにお願いします。嫌がらせ・荒らし行為などには使わないでください。（禁止事項の公序良俗に反する行為に該当します）
+
+
+【更新履歴】
+2023/12/28 リリース 
+ Ver1.00
+
+【制作者】
+AoNeco 青猫
+
+VRChat：AoNeco 青猫
+Cluster：AoNeco 青猫 @TogawaSay
+X（旧twitter）：@AoNeco_BC

@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &4655763472550803010
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 755752517694450110, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1346590748935782057, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_Name
+      value: GoldGolem_mobile
+      objectReference: {fileID: 0}
+    - target: {fileID: 1664012819935754169, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 7e80ae07ee788ce49afd7726d7b37fd8, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 281b6069a5518eb42bc3677a8a90ba64, type: 3}
