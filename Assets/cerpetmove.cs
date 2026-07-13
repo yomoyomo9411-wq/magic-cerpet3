@@ -374,11 +374,11 @@ public float hitObjectRemainSeconds = 2.0f;
 
             if (i < fullHearts)
             {
-                builder.Append("<color=#FF3030>\u2764</color>");
+                builder.Append("<color=#FF3030>\u2665</color>");
             }
             else if (i == fullHearts && hasHalfHeart)
             {
-                builder.Append("<color=#00000000>\u2764</color>");
+                builder.Append("<color=#00000000>\u2665</color>");
             }
             else
             {
