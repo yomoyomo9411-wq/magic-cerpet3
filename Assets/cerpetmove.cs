@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Text;
 using UnityEngine;
 using TMPro;
 
@@ -16,8 +17,6 @@ public class CarpetMove : MonoBehaviour
     public AudioSource tutorialAmbientSource;
     private float goalEnteredAt;
 
-    public float scoreCooldownSeconds = 1f;
-    private float nextScoreAllowedTime;
 
     public ShoulderInput shoulderInput;
     public float shoulderPower = 10f;
@@ -29,13 +28,13 @@ public class CarpetMove : MonoBehaviour
     public AudioClip hitSound1;
     public AudioClip hitSound2;
 
-    [Header("Score Settings")]
-    public int dodgeScore = 100;
-    public int hitEdgeScore = 99;
+    [Header("Life Settings")]
+    public float maxLife = 30f;
+    [Range(0.5f, 3f)]
+    public float defaultHitDamage = 1f;
     [Range(0f, 1f)]
-    public float minimumHitFeedbackIntensity = 0.08f;
-    private int currentScore;
-
+    public float minimumHitFeedbackIntensity = 0.55f;
+    private float currentLife;
     public TMP_Text hpText;
     private bool hpTextVisible;
     public GameObject goalText;
@@ -54,14 +53,12 @@ public float hitObjectRemainSeconds = 2.0f;
 
     public bool isGameOver = false;
     private bool waitingForGoalRestart;
-    private bool hitScoreAddedThisFrame;
     private bool returnedToTitleAfterGoal;
-    private float lastDodgeScoreZ = -999999f;
-    public float sameDodgeGroupZDistance = 5f;
 
     void Start()
     {
         Time.timeScale = 1f;
+        currentLife = Mathf.Max(0.5f, maxLife);
 
 
         if (gameOverText != null)
@@ -81,7 +78,7 @@ public float hitObjectRemainSeconds = 2.0f;
 
         if (hpText != null)
         {
-            hpText.text = "Score : " + currentScore;
+            UpdateLifeText();
             hpText.gameObject.SetActive(false);
             hpTextVisible = false;
         }
@@ -99,7 +96,6 @@ public float hitObjectRemainSeconds = 2.0f;
 
     void Update()
     {
-        hitScoreAddedThisFrame = false;
         if (waitingForGoalRestart)
         {
             HandleGoalRestartInput();
@@ -171,24 +167,16 @@ public float hitObjectRemainSeconds = 2.0f;
         }
     }
 
-    void AddScore(int scoreToAdd)
+    void ApplyDamage(float damage)
     {
-        if (scoreToAdd <= 0)
+        damage = Mathf.Clamp(damage, 0.5f, 3f);
+        currentLife = Mathf.Max(0f, currentLife - damage);
+        UpdateLifeText();
+
+        if (currentLife <= 0f)
         {
-            return;
+            GameOver();
         }
-
-        if (Time.unscaledTime < nextScoreAllowedTime)
-        {
-            return;
-        }
-
-        nextScoreAllowedTime = Time.unscaledTime + scoreCooldownSeconds;
-
-        currentScore += scoreToAdd;
-        UpdateScoreText();
-
-        Debug.Log("Score : " + currentScore);
     }
 
     public void HandleBulletHit(GameObject bulletObject)
@@ -219,58 +207,26 @@ public float hitObjectRemainSeconds = 2.0f;
 
         if (shieldController != null && shieldController.IsShieldActive)
         {
-            if (MagicCarpetGameFlow.IsMainGameStarted)
-            {
-                var shieldScore = IsCircleChallengeObstacle(bulletRoot)
-                    ? MagicCarpetGameFlow.ConsumeCircleChallengeShieldScore(dodgeScore)
-                    : dodgeScore;
-                AddScore(shieldScore);
-            }
-
             DestroyBulletObject(bulletRoot);
             return;
         }
 
+        float damage = runtime != null ? runtime.damage : defaultHitDamage;
+
         if (!MagicCarpetGameFlow.IsMainGameStarted)
         {
             ReportTutorialBulletFailure(bulletRoot);
-            PlayDamageFeedback(1f);
+            PlayDamageFeedback(GetHitFeedbackIntensity(damage));
             return;
         }
 
-        int hitScore = IsCircleChallengeObstacle(bulletRoot) ? 0 : CalculateHitScore(bulletRoot);
-
-        if (!hitScoreAddedThisFrame)
-        {
-            AddScore(hitScore);
-            hitScoreAddedThisFrame = true;
-        }
-
-        PlayDamageFeedback(GetHitFeedbackIntensity(hitScore));
+        ApplyDamage(damage);
+        PlayDamageFeedback(GetHitFeedbackIntensity(damage));
         DestroyBulletObject(bulletRoot);
     }
 
     public void HandleBulletPassed(GameObject bulletObject)
     {
-        if (bulletObject == null || !MagicCarpetGameFlow.IsMainGameStarted)
-        {
-            return;
-        }
-
-        if (IsCircleChallengeObstacle(bulletObject))
-        {
-            return;
-        }
-
-        float bulletZ = bulletObject.transform.position.z;
-
-        if (Mathf.Abs(bulletZ - lastDodgeScoreZ) <= sameDodgeGroupZDistance)
-        {
-            return;
-        }
-
-        lastDodgeScoreZ = bulletZ;
-        AddScore(dodgeScore);
     }
 
     void ReportTutorialBulletFailure(GameObject hitObject)
@@ -401,7 +357,7 @@ public float hitObjectRemainSeconds = 2.0f;
 
         hpText.gameObject.SetActive(shouldShow);
         hpTextVisible = shouldShow;
-        UpdateScoreText();
+        UpdateLifeText();
     }
 
     void EnsureParentsVisible(GameObject target)
@@ -414,92 +370,55 @@ public float hitObjectRemainSeconds = 2.0f;
         }
     }
 
-    void UpdateScoreText()
+    void UpdateLifeText()
     {
         if (hpText != null)
         {
-            hpText.text = "Score : " + currentScore;
+            hpText.color = new Color32(30, 180, 70, 255);
+            hpText.text = "\u30E9\u30A4\u30D5:" + FormatLifeValue(currentLife) + "/" + FormatLifeValue(maxLife) + "\n" + BuildLifeHearts();
         }
     }
 
-    int CalculateHitScore(GameObject hitObject)
+    string FormatLifeValue(float value)
     {
-        var bounds = GetObjectBounds(hitObject);
-        if (!bounds.HasValue)
-        {
-            return 0;
-        }
-
-        var halfWidth = Mathf.Max(0.01f, bounds.Value.extents.x);
-        var distanceFromCenterX = Mathf.Abs(transform.position.x - bounds.Value.center.x);
-        var ratioToEdge = Mathf.Clamp01(distanceFromCenterX / halfWidth);
-        return Mathf.Clamp(Mathf.RoundToInt(ratioToEdge * Mathf.Max(0, hitEdgeScore)), 0, 99);
+        return Mathf.Approximately(value % 1f, 0f) ? Mathf.RoundToInt(value).ToString() : value.ToString("0.0");
     }
 
-    bool IsCircleChallengeObstacle(GameObject hitObject)
+    string BuildLifeHearts()
     {
-        return hitObject != null && hitObject.GetComponentInParent<CircleChallengeObstacle>() != null;
-    }
+        int totalHearts = Mathf.Max(1, Mathf.RoundToInt(maxLife));
+        int fullHearts = Mathf.Clamp(Mathf.FloorToInt(currentLife), 0, totalHearts);
+        bool hasHalfHeart = currentLife - fullHearts >= 0.5f && fullHearts < totalHearts;
 
-    float GetHitFeedbackIntensity(int hitScore)
-    {
-        float maxHitScore = Mathf.Max(1f, Mathf.Min(99f, hitEdgeScore));
-        float scoreRatio = Mathf.Clamp01(hitScore / maxHitScore);
-        return Mathf.Lerp(1f, minimumHitFeedbackIntensity, scoreRatio);
-    }
-
-    Bounds? GetObjectBounds(GameObject target)
-    {
-        if (target == null)
+        var builder = new StringBuilder(totalHearts * 26);
+        for (int i = 0; i < totalHearts; i++)
         {
-            return null;
-        }
-
-        Bounds? bounds = null;
-        foreach (var renderer in target.GetComponentsInChildren<Renderer>(true))
-        {
-            if (renderer == null || !renderer.enabled)
+            if (i > 0 && i % 10 == 0)
             {
-                continue;
+                builder.Append("\n");
             }
 
-            if (!bounds.HasValue)
+            if (i < fullHearts)
             {
-                bounds = renderer.bounds;
+                builder.Append("<color=#ff4f6d>\u2665</color>");
+            }
+            else if (i == fullHearts && hasHalfHeart)
+            {
+                builder.Append("<color=#ff9bad>\u2665</color>");
             }
             else
             {
-                var current = bounds.Value;
-                current.Encapsulate(renderer.bounds);
-                bounds = current;
+                builder.Append("<color=#00000000>\u2665</color>");
             }
         }
 
-        if (bounds.HasValue)
-        {
-            return bounds;
-        }
+        return builder.ToString();
+    }
 
-        foreach (var collider in target.GetComponentsInChildren<Collider>(true))
-        {
-            if (collider == null || !collider.enabled)
-            {
-                continue;
-            }
-
-            if (!bounds.HasValue)
-            {
-                bounds = collider.bounds;
-            }
-            else
-            {
-                var current = bounds.Value;
-                current.Encapsulate(collider.bounds);
-                bounds = current;
-            }
-        }
-
-        return bounds;
+    float GetHitFeedbackIntensity(float damage)
+    {
+        float damageRatio = Mathf.InverseLerp(0.5f, 3f, Mathf.Clamp(damage, 0.5f, 3f));
+        return Mathf.Lerp(minimumHitFeedbackIntensity, 1f, damageRatio);
     }
 
     IEnumerator ShowDamageObject()
@@ -573,11 +492,11 @@ public float hitObjectRemainSeconds = 2.0f;
     {
         returnedToTitleAfterGoal = true;
         isGameOver = false;
-        currentScore = 0;
+        currentLife = Mathf.Max(0.5f, maxLife);
 
         if (hpText != null)
         {
-            hpText.text = "Score : " + currentScore;
+            UpdateLifeText();
             hpText.gameObject.SetActive(false);
             hpTextVisible = false;
         }

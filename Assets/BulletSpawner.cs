@@ -18,6 +18,10 @@ public class BallScheduleEntry
     [Tooltip("この障害物に当たった時に特殊SEを使う")]
     public bool useHitSound2;
 
+    [Tooltip("Life damage when this obstacle hits the player. Range: 0.5 to 3.")]
+    [Range(0.5f, 3f)]
+    public float damage = 1f;
+
     [Tooltip("球の大きさ")]
     [Min(0.1f)]
     public float scale = 2.5f;
@@ -368,6 +372,7 @@ public class BulletSpawner : MonoBehaviour
             runtime.player = player;
             runtime.velocity = ballVelocity;
             runtime.destroyBehindDistance = destroyBehindPlayerDistance;
+            runtime.damage = Mathf.Clamp(entry.damage, 0.5f, 3f);
 
             Destroy(ball, Mathf.Max(bulletLifeTime, activeSpawnDistance / entry.speed + 2f));
             return ball;
