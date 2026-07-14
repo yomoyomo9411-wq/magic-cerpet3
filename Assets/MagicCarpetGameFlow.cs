@@ -47,7 +47,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     public GameObject honbanObject;
     public GameObject successObject;
     public GameObject failureObject;
-    public float resultDisplaySeconds = 1f;
+    public float resultDisplaySeconds = 0.8f;
     public int circleChallengeMaxOtherResults = 3;
     public float circleChallengeAttemptSeconds = 5f;
     [Tooltip("〇判定で画面が止まってから、Pythonの結果を受け付け始めるまでの秒数")]

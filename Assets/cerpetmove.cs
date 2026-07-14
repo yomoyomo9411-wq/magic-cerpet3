@@ -213,7 +213,7 @@ public float hitObjectRemainSeconds = 2.0f;
         if (!MagicCarpetGameFlow.IsMainGameStarted)
         {
             ReportTutorialBulletFailure(bulletRoot);
-            PlayDamageFeedback(GetHitFeedbackIntensity(damage));
+            PlayTutorialDamageFeedback();
             return;
         }
 
@@ -339,6 +339,24 @@ public float hitObjectRemainSeconds = 2.0f;
         if (cameraShakeScript != null)
         {
             cameraShakeScript.Shake(intensity);
+        }
+    }
+
+    private void PlayTutorialDamageFeedback()
+    {
+        if (damageFlash != null)
+        {
+            damageFlash.FlashTutorial(1f, 1f);
+        }
+
+        if (damageObject != null)
+        {
+            StartCoroutine(ShowDamageObject());
+        }
+
+        if (cameraShakeScript != null)
+        {
+            cameraShakeScript.ShakeTutorial(0.8f, 0.6f);
         }
     }
 

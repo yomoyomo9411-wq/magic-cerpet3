@@ -58,13 +58,13 @@ public class TutorialBallResultReporter : MonoBehaviour
 
         if (transform.position.z < player.position.z - passedDistance)
         {
-            reported = true;
-            enabled = false;
             if (ignorePassSuccess)
             {
                 return;
             }
 
+            reported = true;
+            enabled = false;
             MagicCarpetGameFlow.ReportTutorialSuccess();
         }
     }

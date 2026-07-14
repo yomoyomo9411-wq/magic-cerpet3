@@ -29,11 +29,28 @@ public class CameraShake : MonoBehaviour
         shakeCoroutine = StartCoroutine(ShakeRoutine(Mathf.Clamp01(intensity)));
     }
 
+    public void ShakeTutorial(float intensity, float durationSeconds)
+    {
+        if (shakeCoroutine != null)
+        {
+            StopCoroutine(shakeCoroutine);
+        }
+
+        shakeCoroutine = StartCoroutine(ShakeRoutine(
+            Mathf.Clamp01(intensity),
+            Mathf.Max(0.01f, durationSeconds)));
+    }
+
     IEnumerator ShakeRoutine(float intensity)
+    {
+        yield return ShakeRoutine(intensity, -1f);
+    }
+
+    IEnumerator ShakeRoutine(float intensity, float durationOverride)
     {
         float elapsed = 0f;
 
-        float duration = shakeDuration * intensity;
+        float duration = durationOverride > 0f ? durationOverride : shakeDuration * intensity;
         float magnitude = shakeMagnitude * intensity;
 
         while (elapsed < duration)

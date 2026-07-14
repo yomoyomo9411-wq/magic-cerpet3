@@ -31,6 +31,18 @@ public class DamageFlash : MonoBehaviour
         flashCoroutine = StartCoroutine(FlashRoutine(Mathf.Clamp01(intensity)));
     }
 
+    public void FlashTutorial(float intensity, float durationSeconds)
+    {
+        if (flashImage == null) return;
+
+        if (flashCoroutine != null)
+            StopCoroutine(flashCoroutine);
+
+        flashCoroutine = StartCoroutine(FlashTutorialRoutine(
+            Mathf.Clamp01(intensity),
+            Mathf.Max(0.01f, durationSeconds)));
+    }
+
     IEnumerator FlashRoutine(float intensity)
     {
         Color c = flashImage.color;
@@ -41,6 +53,26 @@ public class DamageFlash : MonoBehaviour
         {
             c = flashImage.color;
             c.a -= fadeSpeed * Time.deltaTime;
+            flashImage.color = c;
+            yield return null;
+        }
+
+        c.a = 0;
+        flashImage.color = c;
+    }
+
+    IEnumerator FlashTutorialRoutine(float intensity, float durationSeconds)
+    {
+        Color c = flashImage.color;
+        float startAlpha = Mathf.Max(flashAlpha, 0.85f) * intensity;
+        c.a = startAlpha;
+        flashImage.color = c;
+
+        float fadeSpeedForTutorial = startAlpha / durationSeconds;
+        while (flashImage.color.a > 0)
+        {
+            c = flashImage.color;
+            c.a -= fadeSpeedForTutorial * Time.deltaTime;
             flashImage.color = c;
             yield return null;
         }
