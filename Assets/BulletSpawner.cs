@@ -42,6 +42,9 @@ public class BallScheduleEntry
     [Tooltip("この球が見えた瞬間に画面を止める秒数。0なら止めません")]
     [Min(0f)]
     public float pauseSecondsOnSpawn;
+
+    [Tooltip("チェックすると、この球がプレイヤーの8m手前で停止して円軌跡検知を開始します")]
+    public bool useCircleChallenge;
 }
 
 public class BulletSpawner : MonoBehaviour
@@ -169,25 +172,13 @@ public class BulletSpawner : MonoBehaviour
                 continue;
             }
 
-            var pauseSeconds = 0f;
-            if (isTutorial && entryIndex <= tutorialPauseUntilElement)
+            if (entry.useCircleChallenge)
             {
-                pauseSeconds = tutorialPauseSecondsOnSpawn;
-            }
-
-            var ballPauseSeconds = isTutorial ? GetPauseSecondsForTutorialBall(entry) : 0f;
-            if (ballPauseSeconds > 0f)
-            {
-                pauseSeconds = Mathf.Max(pauseSeconds, ballPauseSeconds);
-            }
-
-            if (isTutorial && pauseSeconds > 0f)
-            {
-                MagicCarpetGameFlow.PauseTutorialForSeconds(pauseSeconds, GetDodgePromptForBall(entry, activeSchedule));
+                StartCoroutine(PauseCircleChallengeBeforeArrival(spawnedBall));
             }
             else if (!isTutorial && IsMainCircleChallengeBall(entry))
             {
-                StartCoroutine(PauseMainCircleChallengeBeforeArrival(spawnedBall));
+                StartCoroutine(PauseCircleChallengeBeforeArrival(spawnedBall));
             }
         }
 
@@ -265,7 +256,7 @@ public class BulletSpawner : MonoBehaviour
         return false;
     }
 
-    private IEnumerator PauseMainCircleChallengeBeforeArrival(GameObject spawnedBall)
+    private IEnumerator PauseCircleChallengeBeforeArrival(GameObject spawnedBall)
     {
         float stopBeforeDistance = 8f; // プレイヤーの何m手前で止めるか
 
@@ -331,9 +322,9 @@ public class BulletSpawner : MonoBehaviour
             {
                 var resultReporter = ball.AddComponent<TutorialBallResultReporter>();
                 resultReporter.player = player;
-                resultReporter.ignorePassSuccess = IsSpecialPauseBall(entry);
+                resultReporter.ignorePassSuccess = entry.useCircleChallenge;
             }
-            else if (IsMainCircleChallengeBall(entry))
+            else if (entry.useCircleChallenge || IsMainCircleChallengeBall(entry))
             {
                 ball.AddComponent<CircleChallengeObstacle>();
             }

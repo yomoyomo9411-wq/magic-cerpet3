@@ -76,6 +76,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     private int circleChallengeOtherResults;
     private float circleChallengeAcceptResultsAt;
     private float circleChallengeStopAt;
+    private float activeCircleChallengeAttemptSeconds;
     private int pendingCircleChallengeShieldScore;
     private bool waitingAtTitleScreen;
     private bool tutorialFailureBlocksSuccess;
@@ -106,12 +107,17 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
     public static void PauseCircleChallenge(string promptObjectName = null)
     {
+        PauseCircleChallenge(promptObjectName, 0f);
+    }
+
+    public static void PauseCircleChallenge(string promptObjectName, float attemptSeconds)
+    {
         if (instance == null || instance.waitingForMainStart)
         {
             return;
         }
 
-        instance.StartCircleChallengePause(promptObjectName);
+        instance.StartCircleChallengePause(promptObjectName, attemptSeconds);
     }
 
     public static void ReportTutorialSuccess()
@@ -151,8 +157,9 @@ public class MagicCarpetGameFlow : MonoBehaviour
             instance.circleChallengeOtherResults = 0;
             instance.circleChallengeAcceptResultsAt = 0f;
             instance.circleChallengeStopAt = 0f;
+
+            instance.ShowOnly(null);   // Successを表示しない
             Time.timeScale = 1f;
-            instance.ShowTutorialResult(instance.successObject, true);
             return;
         }
 
@@ -395,7 +402,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         Debug.Log($"Tutorial paused for {seconds:0.0} seconds.");
     }
 
-    private void StartCircleChallengePause(string promptObjectName)
+    private void StartCircleChallengePause(string promptObjectName, float attemptSeconds)
     {
         waitingForTutorialPause = true;
         showingTutorialResult = false;
@@ -404,6 +411,9 @@ public class MagicCarpetGameFlow : MonoBehaviour
         circleChallengeAcceptResultsAt = Time.unscaledTime + Mathf.Max(0f, circleChallengeResultDelaySeconds);
         circleChallengeStopAt = GetCircleChallengeStopTime();
         pendingCircleChallengeShieldScore = 0;
+        activeCircleChallengeAttemptSeconds = attemptSeconds > 0f
+            ? attemptSeconds
+            : circleChallengeAttemptSeconds;
         tutorialFailureBlocksSuccess = false;
         tutorialPauseEndsAt = Time.unscaledTime;
         ShowOnly(GetPromptObject(string.IsNullOrWhiteSpace(promptObjectName) ? stekkiObjectName : promptObjectName));
@@ -431,7 +441,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         return Time.unscaledTime
             + Mathf.Max(0f, circleChallengeResultDelaySeconds)
-            + Mathf.Max(1f, circleChallengeAttemptSeconds) * Mathf.Max(1, circleChallengeMaxOtherResults)
+            + Mathf.Max(1f, activeCircleChallengeAttemptSeconds) * Mathf.Max(1, circleChallengeMaxOtherResults)
             + 0.5f;
     }
 
@@ -814,5 +824,4 @@ public class MagicCarpetGameFlow : MonoBehaviour
         bgmSource.volume = startVolume;
     }
 }
-
 
