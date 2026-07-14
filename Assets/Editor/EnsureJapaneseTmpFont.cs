@@ -31,7 +31,7 @@ public static class EnsureJapaneseTmpFont
     private static void Apply()
     {
         var scene = SceneManager.GetActiveScene();
-        if (!scene.IsValid() || scene.name != "DemoSkeletonScene")
+        if (!scene.IsValid() || (scene.name != "DemoSkeletonScene" && scene.name != "SampleScene"))
         {
             return;
         }
@@ -79,12 +79,25 @@ public static class EnsureJapaneseTmpFont
     private static TMP_FontAsset EnsureFontAsset()
     {
         var fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(TmpFontPath);
-        if (fontAsset != null)
+        if (fontAsset != null && IsUsableFontAsset(fontAsset))
         {
             fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
             fontAsset.isMultiAtlasTexturesEnabled = true;
             EditorUtility.SetDirty(fontAsset);
             return fontAsset;
+        }
+
+        string originalMeta = null;
+        string fontAssetMetaPath = TmpFontPath + ".meta";
+        if (File.Exists(fontAssetMetaPath))
+        {
+            originalMeta = File.ReadAllText(fontAssetMetaPath);
+        }
+
+        if (fontAsset != null)
+        {
+            AssetDatabase.DeleteAsset(TmpFontPath);
+            AssetDatabase.Refresh();
         }
 
         var font = AssetDatabase.LoadAssetAtPath<Font>(FontPath);
@@ -116,8 +129,37 @@ public static class EnsureJapaneseTmpFont
         fontAsset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
         fontAsset.isMultiAtlasTexturesEnabled = true;
         AssetDatabase.CreateAsset(fontAsset, TmpFontPath);
+
+        if (fontAsset.material != null)
+        {
+            AssetDatabase.AddObjectToAsset(fontAsset.material, TmpFontPath);
+        }
+
+        foreach (var atlasTexture in fontAsset.atlasTextures)
+        {
+            if (atlasTexture != null)
+            {
+                AssetDatabase.AddObjectToAsset(atlasTexture, TmpFontPath);
+            }
+        }
+
         AssetDatabase.SaveAssets();
+        if (!string.IsNullOrEmpty(originalMeta))
+        {
+            File.WriteAllText(fontAssetMetaPath, originalMeta);
+            AssetDatabase.Refresh();
+            fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(TmpFontPath);
+        }
+
         return fontAsset;
+    }
+
+    private static bool IsUsableFontAsset(TMP_FontAsset fontAsset)
+    {
+        return fontAsset != null
+            && fontAsset.material != null
+            && fontAsset.atlasTextures != null
+            && fontAsset.atlasTextures.Length > 0;
     }
 
     private static bool CopyWindowsFontIntoProject()

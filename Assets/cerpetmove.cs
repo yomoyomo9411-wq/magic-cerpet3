@@ -75,8 +75,9 @@ public float hitObjectRemainSeconds = 2.0f;
             goalText.SetActive(false);
         }
 
-        if (hpText != null)
-        {
+        if(hpText != null)
+{
+            ApplyHpTextStyle();
             UpdateLifeText();
             hpText.gameObject.SetActive(false);
         }
@@ -360,14 +361,55 @@ public float hitObjectRemainSeconds = 2.0f;
         }
     }
 
+    private void ApplyHpTextStyle()
+    {
+        if (hpText == null)
+        {
+            return;
+        }
+
+        Material hpMaterial =
+            new Material(hpText.fontSharedMaterial);
+
+        hpText.fontMaterial = hpMaterial;
+
+        // ハートの中身を赤
+        // TMP全体は白
+        hpText.color = Color.white;
+
+        // FaceColorは白ではなく、RichTextを優先させる
+        hpMaterial.SetColor(
+            ShaderUtilities.ID_FaceColor,
+            new Color32(255, 255, 255, 255));
+
+        // ハートの縁を白
+        hpMaterial.SetColor(
+            ShaderUtilities.ID_OutlineColor,
+            new Color32(255, 255, 255, 255));
+
+        // 縁の太さ
+        hpMaterial.SetFloat(
+            ShaderUtilities.ID_OutlineWidth,
+            0.2f);
+
+        hpText.richText = true;
+        hpText.UpdateMeshPadding();
+        hpText.SetAllDirty();
+    }
+
     void UpdateLifeText()
     {
         if (hpText != null)
         {
             hpText.text =
-                "<color=#66FF66>ライフ：" + FormatLifeValue(currentLife) + " / " + FormatLifeValue(maxLife) + "</color>"
-                + "\n"
-                + BuildLifeHearts();
+    "<color=#008800>ライフ：" +
+    FormatLifeValue(currentLife) +
+    " / " +
+    FormatLifeValue(maxLife) +
+    "</color>\n" +
+    "<color=#FF0000>" +
+    BuildLifeHearts() +
+    "</color>";
         }
     }
 
@@ -387,24 +429,19 @@ public float hitObjectRemainSeconds = 2.0f;
         var builder = new StringBuilder(totalHearts * 26);
         for (int i = 0; i < totalHearts; i++)
         {
-            if (i > 0 && i % 10 == 0)
-            {
-                builder.Append("\n");
-            }
-
             if (i < fullHearts)
             {
-                builder.Append("<color=#FF3030>\u2665</color> ");
+                builder.Append("♥ ");
             }
             else if (i == fullHearts && hasHalfHeart)
             {
                 builder.Append(partialHeartOpaque
-                    ? "<color=#FF3030>\u2665</color> "
-                    : "<color=#FF303055>\u2665</color> ");
+                    ? "♥ "
+                    : "<alpha=#55>♥<alpha=#FF> ");
             }
             else
             {
-                builder.Append("<color=#00000000>\u2665</color> ");
+                builder.Append("<alpha=#00>♥<alpha=#FF> ");
             }
         }
 

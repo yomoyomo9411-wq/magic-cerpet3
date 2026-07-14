@@ -111,7 +111,7 @@ public class BulletSpawner : MonoBehaviour
     private float tutorialElapsedTime;
     private int nextTutorialBallIndex;
     private bool mainScheduleStarted;
-    private bool tutorialPracticeHidden;
+    private bool tutorialSecondBallMonitorStarted;
     private CarpetMove carpet;
 
     private void Start()
@@ -173,10 +173,10 @@ public class BulletSpawner : MonoBehaviour
                 continue;
             }
 
-            if (isTutorial && !tutorialPracticeHidden && entryIndex == 0)
+            if (isTutorial && !tutorialSecondBallMonitorStarted && entryIndex == 1)
             {
-                tutorialPracticeHidden = true;
-                StartCoroutine(HidePracticeWhenFirstBallApproaches(spawnedBall));
+                tutorialSecondBallMonitorStarted = true;
+                StartCoroutine(HideMove2WhenSecondBallPassed(spawnedBall));
             }
 
             if (entry.useCircleChallenge)
@@ -280,17 +280,13 @@ public class BulletSpawner : MonoBehaviour
         MagicCarpetGameFlow.PauseCircleChallenge("stekki");
     }
 
-    private IEnumerator HidePracticeWhenFirstBallApproaches(GameObject spawnedBall)
+    private IEnumerator HideMove2WhenSecondBallPassed(GameObject spawnedBall)
     {
-        const float hideDistance = 20f;
-
         while (spawnedBall != null && player != null)
         {
-            float zDistance = spawnedBall.transform.position.z - player.position.z;
-
-            if (zDistance <= hideDistance)
+            if (spawnedBall.transform.position.z <= player.position.z)
             {
-                MagicCarpetGameFlow.HidePracticePrompt();
+                MagicCarpetGameFlow.HideMove2Prompt();
                 yield break;
             }
 
@@ -447,7 +443,7 @@ public class BulletSpawner : MonoBehaviour
         tutorialElapsedTime = 0f;
         nextTutorialBallIndex = 0;
         mainScheduleStarted = false;
-        tutorialPracticeHidden = false;
+        tutorialSecondBallMonitorStarted = false;
     }
 
     private Vector3 GetSafeVisualScale(Vector3 visualScale)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using TMPro;
 
 public class MagicCarpetGameFlow : MonoBehaviour
 {
@@ -31,6 +32,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
     [Header("Tutorial Prompts")]
     public string titleObjectName = "Title";
     public string practiceObjectName = "Practice";
+    public string rule1ObjectName = "rule1";
+    public string rule2ObjectName = "rule2";
+    public string moveObjectName = "move";
+    public string move2ObjectName = "move2";
+    public string circleTestObjectName = "circletest";
     public string rightObjectName = "Right";
     public string leftObjectName = "Left";
     public string middleObjectName = "Middle";
@@ -40,14 +46,28 @@ public class MagicCarpetGameFlow : MonoBehaviour
     public string failureObjectName = "Failure";
     public GameObject titleObject;
     public GameObject practiceObject;
+    [Header("Practice Text Style")]
+    public Color32 practiceTextColor = new Color32(255, 230, 0, 255);
+    public Color32 practiceOutlineColor = new Color32(0, 0, 0, 255);
+
+    [Range(0f, 1f)]
+    public float practiceOutlineWidth = 0.2f;
+    public GameObject rule1Object;
+    public GameObject rule2Object;
+    public GameObject moveObject;
+    public GameObject move2Object;
     public GameObject rightObject;
     public GameObject leftObject;
     public GameObject middleObject;
     public GameObject stekkiObject;
     public GameObject honbanObject;
+    public GameObject circleTestObject;
     public GameObject successObject;
     public GameObject failureObject;
     public float resultDisplaySeconds = 0.8f;
+    public float practiceDisplaySeconds = 2f;
+    public float ruleMoveDisplaySeconds = 5f;
+    public float rule2DisplaySeconds = 5f;
     public int circleChallengeMaxOtherResults = 3;
     public float circleChallengeAttemptSeconds = 5f;
     [Tooltip("〇判定で画面が止まってから、Pythonの結果を受け付け始めるまでの秒数")]
@@ -77,9 +97,13 @@ public class MagicCarpetGameFlow : MonoBehaviour
     private float circleChallengeAcceptResultsAt;
     private float circleChallengeStopAt;
     private float activeCircleChallengeAttemptSeconds;
+    private bool circleChallengeDetectionStarted;
     private int pendingCircleChallengeShieldScore;
     private bool waitingAtTitleScreen;
     private bool tutorialFailureBlocksSuccess;
+    private Coroutine tutorialIntroCoroutine;
+    private bool move2PromptShown;
+    private bool tutorialSecondBallPassed;
 
     public static bool IsMainGameStarted => instance == null || instance.mainGameStarted;
     public static bool HasReachedMainStartLine => instance != null && (instance.waitingForMainStart || instance.mainGameStarted);
@@ -137,9 +161,21 @@ public class MagicCarpetGameFlow : MonoBehaviour
             return;
         }
 
-        if (instance.practiceObject != null)
+        // Practiceは本番開始前まで残す
+        instance.SetVisible(instance.rule1Object, false);
+    }
+
+    public static void HideMove2Prompt()
+    {
+        if (instance == null || instance.mainGameStarted)
         {
-            instance.practiceObject.SetActive(false);
+            return;
+        }
+
+        instance.tutorialSecondBallPassed = true;
+        if (instance.move2PromptShown)
+        {
+            instance.SetVisible(instance.move2Object, false);
         }
     }
 
@@ -178,7 +214,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         instance.circleChallengeOtherResults++;
         if (instance.circleChallengeOtherResults < Mathf.Max(1, instance.circleChallengeMaxOtherResults))
         {
-            instance.ShowOnly(instance.stekkiObject);
+            instance.ShowOnly(instance.circleTestObject);
             return;
         }
 
@@ -237,15 +273,21 @@ public class MagicCarpetGameFlow : MonoBehaviour
         showingTutorialResult = false;
         tutorialResultLockEndsAt = 0f;
         waitingForCircleChallenge = false;
+        circleChallengeDetectionStarted = false;
         circleChallengeOtherResults = 0;
         circleChallengeAcceptResultsAt = 0f;
         pendingCircleChallengeShieldScore = 0;
         tutorialFailureBlocksSuccess = false;
         waitingAtTitleScreen = false;
+        move2PromptShown = false;
+        tutorialSecondBallPassed = false;
         ValidateUiReferences();
+        ApplyPracticeTextStyle();
+
         SetMainStartObjectsVisible(false);
         ShowOnly(practiceObject);
         Time.timeScale = 1f;
+        BeginTutorialIntro();
         ApplyDevelopmentStartMode();
     }
 
@@ -260,6 +302,17 @@ public class MagicCarpetGameFlow : MonoBehaviour
                     SkipCircleChallenge();
                 }
 
+                if (!circleChallengeDetectionStarted
+    && Time.unscaledTime >= circleChallengeAcceptResultsAt)
+                {
+                    circleChallengeDetectionStarted = true;
+
+                    // rule2とmove2を消し、軌跡検知中の文字を表示
+                    ShowOnly(circleTestObject);
+
+                    MagicCarpetPoseController.StartCircleDetection();
+                }
+
                 if (circleChallengeStopAt > 0f && Time.unscaledTime >= circleChallengeStopAt)
                 {
                     FinishCircleChallengeWithoutSuccess();
@@ -272,6 +325,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
             {
                 waitingForTutorialPause = false;
                 waitingForCircleChallenge = false;
+                circleChallengeDetectionStarted = false;
                 circleChallengeOtherResults = 0;
                 circleChallengeAcceptResultsAt = 0f;
                 circleChallengeStopAt = 0f;
@@ -286,7 +340,19 @@ public class MagicCarpetGameFlow : MonoBehaviour
         if (showingTutorialResult && Time.unscaledTime >= tutorialResultEndsAt)
         {
             showingTutorialResult = false;
-            ShowOnly(null);
+
+            // 2個目の球をまだ通過していなければmove2を再表示
+            if (!mainGameStarted
+                && move2PromptShown
+                && !tutorialSecondBallPassed)
+            {
+                ShowOnly(move2Object);
+            }
+            else
+            {
+                ShowOnly(null);
+            }
+
             Time.timeScale = 1f;
         }
 
@@ -342,6 +408,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         ShowOnly(practiceObject);
         Time.timeScale = 1f;
+        BeginTutorialIntro();
 
         Debug.Log("Tutorial started.");
     }
@@ -393,6 +460,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         waitingForTutorialPause = true;
         showingTutorialResult = false;
         waitingForCircleChallenge = promptObjectName != null && promptObjectName.Equals(stekkiObjectName, System.StringComparison.OrdinalIgnoreCase);
+        circleChallengeDetectionStarted = !waitingForCircleChallenge;
         circleChallengeOtherResults = 0;
         circleChallengeAcceptResultsAt = waitingForCircleChallenge
             ? Time.unscaledTime + Mathf.Max(0f, circleChallengeResultDelaySeconds)
@@ -416,21 +484,49 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
     private void StartCircleChallengePause(string promptObjectName, float attemptSeconds)
     {
+        bool isTutorialChallenge = !mainGameStarted && !waitingForMainStart;
+
         waitingForTutorialPause = true;
         showingTutorialResult = false;
         waitingForCircleChallenge = true;
+
+        // チュートリアルでは、5秒後に軌跡検知を開始する
+        circleChallengeDetectionStarted = !isTutorialChallenge;
         circleChallengeOtherResults = 0;
-        circleChallengeAcceptResultsAt = Time.unscaledTime + Mathf.Max(0f, circleChallengeResultDelaySeconds);
+
+        circleChallengeAcceptResultsAt = Time.unscaledTime + Mathf.Max(
+            0f,
+            isTutorialChallenge
+                ? rule2DisplaySeconds
+                : circleChallengeResultDelaySeconds);
+
         pendingCircleChallengeShieldScore = 0;
+
         activeCircleChallengeAttemptSeconds = attemptSeconds > 0f
             ? attemptSeconds
             : circleChallengeAttemptSeconds;
+
         circleChallengeStopAt = GetCircleChallengeStopTime();
         tutorialFailureBlocksSuccess = false;
         tutorialPauseEndsAt = Time.unscaledTime;
-        ShowOnly(GetPromptObject(string.IsNullOrWhiteSpace(promptObjectName) ? stekkiObjectName : promptObjectName));
+
+        if (isTutorialChallenge)
+        {
+            // よけられない球が来た直後の5秒間
+            ShowOnly(rule2Object, stekkiObject);
+        }
+        else
+        {
+            // 本番はすぐに軌跡検知へ入る
+            ShowOnly(circleTestObject);
+        }
+
         Time.timeScale = 0f;
-        MagicCarpetPoseController.StartCircleDetection();
+
+        if (!isTutorialChallenge)
+        {
+            MagicCarpetPoseController.StartCircleDetection();
+        }
 
         Debug.Log("Circle challenge paused the game.");
     }
@@ -439,6 +535,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         waitingForCircleChallenge = false;
         waitingForTutorialPause = false;
+        circleChallengeDetectionStarted = false;
         circleChallengeOtherResults = 0;
         circleChallengeAcceptResultsAt = 0f;
         circleChallengeStopAt = 0f;
@@ -451,8 +548,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
     private float GetCircleChallengeStopTime()
     {
-        return Time.unscaledTime
-            + Mathf.Max(0f, circleChallengeResultDelaySeconds)
+        return circleChallengeAcceptResultsAt
             + Mathf.Max(1f, activeCircleChallengeAttemptSeconds) * Mathf.Max(1, circleChallengeMaxOtherResults)
             + 0.5f;
     }
@@ -461,6 +557,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         waitingForCircleChallenge = false;
         waitingForTutorialPause = false;
+        circleChallengeDetectionStarted = false;
         circleChallengeOtherResults = 0;
         circleChallengeAcceptResultsAt = 0f;
         circleChallengeStopAt = 0f;
@@ -487,7 +584,18 @@ public class MagicCarpetGameFlow : MonoBehaviour
         showingTutorialResult = true;
         tutorialResultEndsAt = Time.unscaledTime + resultDisplaySeconds;
         tutorialResultLockEndsAt = tutorialResultEndsAt + 0.25f;
-        ShowOnly(resultObject);
+
+        if (!mainGameStarted
+            && move2PromptShown
+            && !tutorialSecondBallPassed)
+        {
+            ShowOnly(resultObject, move2Object);
+        }
+        else
+        {
+            ShowOnly(resultObject);
+        }
+
         Time.timeScale = 1f;
     }
 
@@ -502,7 +610,18 @@ public class MagicCarpetGameFlow : MonoBehaviour
         showingTutorialResult = true;
         tutorialResultEndsAt = Time.unscaledTime + resultDisplaySeconds;
         tutorialResultLockEndsAt = tutorialResultEndsAt + 0.25f;
-        ShowOnly(resultObject);
+
+        if (!mainGameStarted
+            && move2PromptShown
+            && !tutorialSecondBallPassed)
+        {
+            ShowOnly(resultObject, move2Object);
+        }
+        else
+        {
+            ShowOnly(resultObject);
+        }
+
         Time.timeScale = 1f;
     }
 
@@ -616,10 +735,13 @@ public class MagicCarpetGameFlow : MonoBehaviour
         tutorialFailureBlocksSuccess = false;
         tutorialResultLockEndsAt = 0f;
         waitingAtTitleScreen = false;
+        move2PromptShown = false;
+        tutorialSecondBallPassed = false;
 
         ResetSpawners();
         ShowOnly(practiceObject);
         Time.timeScale = 1f;
+        BeginTutorialIntro();
 
         Debug.Log("Next run started.");
     }
@@ -652,6 +774,10 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         if (titleObject == null) Debug.LogError("Title Object is not assigned.", this);
         if (practiceObject == null) Debug.LogError("Practice Object is not assigned.", this);
+        if (rule1Object == null) Debug.LogError("Rule1 Object is not assigned.", this);
+        if (rule2Object == null) Debug.LogError("Rule2 Object is not assigned.", this);
+        if (moveObject == null) Debug.LogError("Move Object is not assigned.", this);
+        if (move2Object == null) Debug.LogError("Move2 Object is not assigned.", this);
         if (rightObject == null) Debug.LogError("Right Object is not assigned.", this);
         if (leftObject == null) Debug.LogError("Left Object is not assigned.", this);
         if (middleObject == null) Debug.LogError("Middle Object is not assigned.", this);
@@ -659,6 +785,8 @@ public class MagicCarpetGameFlow : MonoBehaviour
         if (honbanObject == null) Debug.LogError("Honban Object is not assigned.", this);
         if (successObject == null) Debug.LogError("Success Object is not assigned.", this);
         if (failureObject == null) Debug.LogError("Failure Object is not assigned.", this);
+        if (circleTestObject == null)
+            Debug.LogError("Circle Test Object is not assigned.", this);
     }
 
     private void ResolveMainStartObjects()
@@ -778,6 +906,26 @@ public class MagicCarpetGameFlow : MonoBehaviour
             return practiceObject;
         }
 
+        if (promptObjectName.Equals(rule1ObjectName, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return rule1Object;
+        }
+
+        if (promptObjectName.Equals(rule2ObjectName, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return rule2Object;
+        }
+
+        if (promptObjectName.Equals(moveObjectName, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return moveObject;
+        }
+
+        if (promptObjectName.Equals(move2ObjectName, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return move2Object;
+        }
+
         if (promptObjectName.Equals(titleObjectName, System.StringComparison.OrdinalIgnoreCase))
         {
             return titleObject;
@@ -799,7 +947,14 @@ public class MagicCarpetGameFlow : MonoBehaviour
     private void ShowOnly(GameObject visibleObject)
     {
         SetVisible(titleObject, visibleObject == titleObject);
-        SetVisible(practiceObject, visibleObject == practiceObject);
+        SetVisible(
+    practiceObject,
+    visibleObject == practiceObject || ShouldKeepPracticeVisible());
+        SetVisible(rule1Object, visibleObject == rule1Object);
+        SetVisible(rule2Object, visibleObject == rule2Object);
+        SetVisible(moveObject, visibleObject == moveObject);
+        SetVisible(move2Object, visibleObject == move2Object);
+        SetVisible(circleTestObject, visibleObject == circleTestObject);
         SetVisible(rightObject, visibleObject == rightObject);
         SetVisible(leftObject, visibleObject == leftObject);
         SetVisible(middleObject, visibleObject == middleObject);
@@ -809,12 +964,112 @@ public class MagicCarpetGameFlow : MonoBehaviour
         SetVisible(failureObject, visibleObject == failureObject);
     }
 
+    private void ShowOnly(GameObject firstVisibleObject, GameObject secondVisibleObject)
+    {
+        SetVisible(titleObject, firstVisibleObject == titleObject || secondVisibleObject == titleObject);
+        SetVisible(
+    practiceObject,
+    firstVisibleObject == practiceObject
+    || secondVisibleObject == practiceObject
+    || ShouldKeepPracticeVisible());
+        SetVisible(rule1Object, firstVisibleObject == rule1Object || secondVisibleObject == rule1Object);
+        SetVisible(rule2Object, firstVisibleObject == rule2Object || secondVisibleObject == rule2Object);
+        SetVisible(moveObject, firstVisibleObject == moveObject || secondVisibleObject == moveObject);
+        SetVisible(move2Object, firstVisibleObject == move2Object || secondVisibleObject == move2Object);
+        SetVisible(circleTestObject, firstVisibleObject == circleTestObject || secondVisibleObject == circleTestObject);
+        SetVisible(rightObject, firstVisibleObject == rightObject || secondVisibleObject == rightObject);
+        SetVisible(leftObject, firstVisibleObject == leftObject || secondVisibleObject == leftObject);
+        SetVisible(middleObject, firstVisibleObject == middleObject || secondVisibleObject == middleObject);
+        SetVisible(stekkiObject, firstVisibleObject == stekkiObject || secondVisibleObject == stekkiObject);
+        SetVisible(honbanObject, firstVisibleObject == honbanObject || secondVisibleObject == honbanObject);
+        SetVisible(successObject, firstVisibleObject == successObject || secondVisibleObject == successObject);
+        SetVisible(failureObject, firstVisibleObject == failureObject || secondVisibleObject == failureObject);
+    }
+
     private void SetVisible(GameObject target, bool visible)
     {
         if (target != null)
         {
             target.SetActive(visible);
         }
+    }
+
+    private bool ShouldKeepPracticeVisible()
+    {
+        return !mainGameStarted
+            && !waitingForMainStart
+            && !waitingAtTitleScreen;
+    }
+
+    private void ApplyPracticeTextStyle()
+    {
+        if (practiceObject == null)
+        {
+            return;
+        }
+
+        TMP_Text[] practiceTexts =
+            practiceObject.GetComponentsInChildren<TMP_Text>(true);
+
+        foreach (TMP_Text practiceText in practiceTexts)
+        {
+            Material practiceMaterial =
+                new Material(practiceText.fontSharedMaterial);
+
+            practiceText.fontMaterial = practiceMaterial;
+
+            Color32 yellow = new Color32(255, 230, 0, 255);
+            Color32 black = new Color32(0, 0, 0, 255);
+
+            practiceText.color = yellow;
+
+            practiceMaterial.SetColor(
+                ShaderUtilities.ID_FaceColor,
+                yellow);
+
+            practiceMaterial.SetColor(
+                ShaderUtilities.ID_OutlineColor,
+                black);
+
+            practiceMaterial.SetFloat(
+                ShaderUtilities.ID_OutlineWidth,
+                0.25f);
+
+            practiceText.UpdateMeshPadding();
+            practiceText.SetAllDirty();
+        }
+    }
+
+    private void BeginTutorialIntro()
+    {
+        if (tutorialIntroCoroutine != null)
+        {
+            StopCoroutine(tutorialIntroCoroutine);
+        }
+
+        tutorialIntroCoroutine = StartCoroutine(ShowRule1AfterPractice());
+    }
+
+    private IEnumerator ShowRule1AfterPractice()
+    {
+        yield return new WaitForSecondsRealtime(Mathf.Max(0f, practiceDisplaySeconds));
+
+        if (!mainGameStarted && !waitingForMainStart && !waitingForTutorialPause)
+        {
+            ShowOnly(rule1Object, moveObject);
+            yield return new WaitForSecondsRealtime(Mathf.Max(0f, ruleMoveDisplaySeconds));
+
+            if (!mainGameStarted && !waitingForMainStart && !waitingForTutorialPause)
+            {
+                move2PromptShown = true;
+                if (!tutorialSecondBallPassed)
+                {
+                    ShowOnly(move2Object);
+                }
+            }
+        }
+
+        tutorialIntroCoroutine = null;
     }
 
     private void OnDestroy()
