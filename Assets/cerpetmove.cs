@@ -347,7 +347,7 @@ public float hitObjectRemainSeconds = 2.0f;
         if (hpText != null)
         {
             hpText.text =
-                "<color=#66FF66>ライフ:" + FormatLifeValue(currentLife) + "/" + FormatLifeValue(maxLife) + "</color>"
+                "<color=#66FF66>ライフ：" + FormatLifeValue(currentLife) + "/" + FormatLifeValue(maxLife) + "</color>"
                 + "\n"
                 + BuildLifeHearts();
         }
