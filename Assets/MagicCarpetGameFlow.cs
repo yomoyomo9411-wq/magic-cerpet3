@@ -20,6 +20,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     public AudioSource bgmSource;
     public float bgmFadeOutSeconds = 4f;
 
+
     [Header("Development")]
     public DevelopmentStartMode developmentStartMode = DevelopmentStartMode.Tutorial;
 
@@ -113,6 +114,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         && instance.waitingForCircleChallenge
         && Time.unscaledTime >= instance.circleChallengeAcceptResultsAt;
     public static bool IsTutorialResultLocked => instance != null && instance.IsResultLocked();
+    private Coroutine circleFailureCoroutine;
 
     public static void PauseTutorialForSeconds(float seconds)
     {
@@ -212,9 +214,17 @@ public class MagicCarpetGameFlow : MonoBehaviour
         }
 
         instance.circleChallengeOtherResults++;
+
+        if (instance.circleFailureCoroutine != null)
+        {
+            instance.StopCoroutine(instance.circleFailureCoroutine);
+        }
+
+        instance.circleFailureCoroutine =
+            instance.StartCoroutine(instance.ShowCircleFailureRoutine());
+
         if (instance.circleChallengeOtherResults < Mathf.Max(1, instance.circleChallengeMaxOtherResults))
         {
-            instance.ShowOnly(instance.circleTestObject);
             return;
         }
 
@@ -623,6 +633,26 @@ public class MagicCarpetGameFlow : MonoBehaviour
         }
 
         Time.timeScale = 1f;
+    }
+
+    private IEnumerator ShowCircleFailureRoutine()
+    {
+        ShowOnly(failureObject);
+
+        yield return new WaitForSecondsRealtime(
+            Mathf.Max(0f, resultDisplaySeconds)
+        );
+
+        circleFailureCoroutine = null;
+
+        if (waitingForCircleChallenge)
+        {
+            ShowOnly(circleTestObject);
+        }
+        else
+        {
+            ShowOnly(null);
+        }
     }
 
     private bool IsResultLocked()

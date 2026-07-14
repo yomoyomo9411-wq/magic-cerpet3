@@ -6,7 +6,7 @@ public class ShieldController : MonoBehaviour
     [Header("Shield")]
     public bool showVisualEffect = false;
     public bool alwaysVisible = false;
-    public float shieldDuration = 5f;
+    public float shieldDuration = 2f;
     public string sceneVisualEffectName = "ShieldAuraPreview";
     public string magicCircleResourceName = "MagicCircleShield";
     public bool attachToMainCamera = false;

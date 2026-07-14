@@ -305,14 +305,14 @@ public class MagicCarpetPoseController : MonoBehaviour
 
         if (MagicCarpetGameFlow.IsCircleChallengeAcceptingResults && Time.unscaledTime >= nextCirclePollTime)
         {
-            nextCirclePollTime = Time.unscaledTime + 0.5f;
+            nextCirclePollTime = Time.unscaledTime + 0.2f;
             RequestCircleClassification();
         }
     }
 
     private void OnGUI()
     {
-        if (string.IsNullOrEmpty(circleResultLabel) || Time.unscaledTime > circleResultVisibleUntil)
+        /*if (string.IsNullOrEmpty(circleResultLabel) || Time.unscaledTime > circleResultVisibleUntil)
         {
             return;
         }
@@ -329,7 +329,7 @@ public class MagicCarpetPoseController : MonoBehaviour
 
         var rect = new UnityEngine.Rect(24f, 88f, 360f, 72f);
         GUI.Box(rect, GUIContent.none);
-        GUI.Label(rect, $"{circleResultLabel}  {circleResultProbability * 100f:0}%", style);
+        GUI.Label(rect, $"{circleResultLabel}  {circleResultProbability * 100f:0}%", style);*/
     }
 
     private void CreateBrightPointPreview()

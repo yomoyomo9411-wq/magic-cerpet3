@@ -482,17 +482,17 @@ public float hitObjectRemainSeconds = 2.0f;
         {
             if (i < fullHearts)
             {
-                builder.Append("♥ ");
+                builder.Append("<alpha=#FF>♥ ");
             }
             else if (i == fullHearts && hasHalfHeart)
             {
                 builder.Append(partialHeartOpaque
-                    ? "<alpha=#FF>♥</alpha> "
-                    : "<alpha=#80>♥</alpha> ");
+                    ? "<alpha=#FF>♥ "
+                    : "<alpha=#80>♥ <alpha=#FF>");
             }
             else
             {
-                builder.Append("<alpha=#00>♥</alpha> ");
+                builder.Append("<alpha=#00>♥ <alpha=#FF>");
             }
         }
 
