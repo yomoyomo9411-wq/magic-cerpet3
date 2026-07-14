@@ -29,8 +29,8 @@ public class CarpetMove : MonoBehaviour
     public AudioClip hitSound2;
 
     [Header("Life Settings")]
-    public float maxLife = 30f;
-    [Range(0.5f, 3f)]
+    public float maxLife = 10f;
+    [Range(0.1f, 3f)]
     public float defaultHitDamage = 1f;
     [Range(0f, 1f)]
     public float minimumHitFeedbackIntensity = 0.55f;
@@ -57,7 +57,7 @@ public float hitObjectRemainSeconds = 2.0f;
     void Start()
     {
         Time.timeScale = 1f;
-        currentLife = Mathf.Max(0.5f, maxLife);
+        currentLife = Mathf.Max(0.1f, maxLife);
 
 
         if (gameOverText != null)
@@ -166,7 +166,7 @@ public float hitObjectRemainSeconds = 2.0f;
 
     void ApplyDamage(float damage)
     {
-        damage = Mathf.Clamp(damage, 0.5f, 3f);
+        damage = Mathf.Clamp(Mathf.Round(damage * 10f) / 10f, 0.1f, 3f);
         currentLife = Mathf.Max(0f, currentLife - damage);
         UpdateLifeText();
 
@@ -361,8 +361,10 @@ public float hitObjectRemainSeconds = 2.0f;
     string BuildLifeHearts()
     {
         int totalHearts = Mathf.Max(1, Mathf.RoundToInt(maxLife));
+        float fractionalLife = currentLife - Mathf.Floor(currentLife);
         int fullHearts = Mathf.Clamp(Mathf.FloorToInt(currentLife), 0, totalHearts);
-        bool hasHalfHeart = currentLife - fullHearts >= 0.5f && fullHearts < totalHearts;
+        bool hasHalfHeart = fractionalLife > Mathf.Epsilon && fullHearts < totalHearts;
+        bool partialHeartOpaque = fractionalLife >= 0.5f;
 
         var builder = new StringBuilder(totalHearts * 26);
         for (int i = 0; i < totalHearts; i++)
@@ -378,7 +380,9 @@ public float hitObjectRemainSeconds = 2.0f;
             }
             else if (i == fullHearts && hasHalfHeart)
             {
-                builder.Append("<color=#00000000>\u2665</color>");
+                builder.Append(partialHeartOpaque
+                    ? "<color=#FF3030>\u2665</color>"
+                    : "<color=#FF303055>\u2665</color>");
             }
             else
             {
@@ -391,7 +395,8 @@ public float hitObjectRemainSeconds = 2.0f;
 
     float GetHitFeedbackIntensity(float damage)
     {
-        float damageRatio = Mathf.InverseLerp(0.5f, 3f, Mathf.Clamp(damage, 0.5f, 3f));
+        float quantizedDamage = Mathf.Clamp(Mathf.Round(damage * 10f) / 10f, 0.1f, 3f);
+        float damageRatio = Mathf.InverseLerp(0.1f, 3f, quantizedDamage);
         return Mathf.Lerp(minimumHitFeedbackIntensity, 1f, damageRatio);
     }
 
@@ -466,7 +471,7 @@ public float hitObjectRemainSeconds = 2.0f;
     {
         returnedToTitleAfterGoal = true;
         isGameOver = false;
-        currentLife = Mathf.Max(0.5f, maxLife);
+        currentLife = Mathf.Max(0.1f, maxLife);
 
         if (hpText != null)
         {
