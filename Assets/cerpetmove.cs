@@ -365,7 +365,7 @@ public float hitObjectRemainSeconds = 2.0f;
         if (hpText != null)
         {
             hpText.text =
-                "<color=#66FF66>ライフ：" + FormatLifeValue(currentLife) + "/" + FormatLifeValue(maxLife) + "</color>"
+                "<color=#66FF66>ライフ：" + FormatLifeValue(currentLife) + " / " + FormatLifeValue(maxLife) + "</color>"
                 + "\n"
                 + BuildLifeHearts();
         }
@@ -394,17 +394,17 @@ public float hitObjectRemainSeconds = 2.0f;
 
             if (i < fullHearts)
             {
-                builder.Append("<color=#FF3030>\u2665</color>");
+                builder.Append("<color=#FF3030>\u2665</color> ");
             }
             else if (i == fullHearts && hasHalfHeart)
             {
                 builder.Append(partialHeartOpaque
-                    ? "<color=#FF3030>\u2665</color>"
-                    : "<color=#FF303055>\u2665</color>");
+                    ? "<color=#FF3030>\u2665</color> "
+                    : "<color=#FF303055>\u2665</color> ");
             }
             else
             {
-                builder.Append("<color=#00000000>\u2665</color>");
+                builder.Append("<color=#00000000>\u2665</color> ");
             }
         }
 
