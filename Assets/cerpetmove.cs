@@ -35,7 +35,8 @@ public class CarpetMove : MonoBehaviour
     [Range(0f, 1f)]
     public float minimumHitFeedbackIntensity = 0.55f;
     private float currentLife;
-    public TMP_Text hpText;
+    public TMP_Text lifeText;
+    public TMP_Text heartsText;
     public GameObject goalText;
     public DamageFlash damageFlash;
 
@@ -75,12 +76,19 @@ public float hitObjectRemainSeconds = 2.0f;
             goalText.SetActive(false);
         }
 
-        if(hpText != null)
-{
-            ApplyHpTextStyle();
-            UpdateLifeText();
-            hpText.gameObject.SetActive(false);
+        if (lifeText != null)
+        {
+            ApplyLifeTextStyle();
+            lifeText.gameObject.SetActive(false);
         }
+
+        if (heartsText != null)
+        {
+            ApplyHeartsTextStyle();
+            heartsText.gameObject.SetActive(false);
+        }
+
+        UpdateLifeText();
 
         if (cameraShakeScript == null && cameraObject != null)
         {
@@ -229,9 +237,14 @@ public float hitObjectRemainSeconds = 2.0f;
 
     public void SetHpVisible(bool visible)
     {
-        if (hpText != null)
+        if (lifeText != null)
         {
-            hpText.gameObject.SetActive(visible);
+            lifeText.gameObject.SetActive(visible);
+        }
+
+        if (heartsText != null)
+        {
+            heartsText.gameObject.SetActive(visible);
         }
     }
 
@@ -361,55 +374,85 @@ public float hitObjectRemainSeconds = 2.0f;
         }
     }
 
-    private void ApplyHpTextStyle()
+    private void ApplyLifeTextStyle()
     {
-        if (hpText == null)
+        if (lifeText == null)
         {
             return;
         }
 
-        Material hpMaterial =
-            new Material(hpText.fontSharedMaterial);
+        Material material = new Material(lifeText.fontSharedMaterial);
 
-        hpText.fontMaterial = hpMaterial;
-
-        // ハートの中身を赤
-        // TMP全体は白
-        hpText.color = Color.white;
-
-        // FaceColorは白ではなく、RichTextを優先させる
-        hpMaterial.SetColor(
+        // 文字本体の基準色は白
+        material.SetColor(
             ShaderUtilities.ID_FaceColor,
-            new Color32(255, 255, 255, 255));
+            Color.white);
 
-        // ハートの縁を白
-        hpMaterial.SetColor(
+        // 縁は白
+        material.SetColor(
             ShaderUtilities.ID_OutlineColor,
-            new Color32(255, 255, 255, 255));
+            Color.white);
 
-        // 縁の太さ
-        hpMaterial.SetFloat(
+        material.SetFloat(
             ShaderUtilities.ID_OutlineWidth,
             0.2f);
 
-        hpText.richText = true;
-        hpText.UpdateMeshPadding();
-        hpText.SetAllDirty();
+        lifeText.fontMaterial = material;
+
+        // ライフ文字を緑にする
+        lifeText.color = new Color32(0, 102, 0, 255);
+
+        lifeText.UpdateMeshPadding();
+    }
+
+    private void ApplyHeartsTextStyle()
+    {
+        if (heartsText == null)
+        {
+            return;
+        }
+
+        Material material = new Material(heartsText.fontSharedMaterial);
+
+        // ハート本体の基準色は白
+        material.SetColor(
+            ShaderUtilities.ID_FaceColor,
+            Color.white);
+
+        // 縁は白
+        material.SetColor(
+            ShaderUtilities.ID_OutlineColor,
+            Color.white);
+
+        material.SetFloat(
+            ShaderUtilities.ID_OutlineWidth,
+            0.2f);
+
+        heartsText.fontMaterial = material;
+
+        // ハートを赤にする
+        heartsText.color = Color.red;
+
+        heartsText.enableWordWrapping = false;
+        heartsText.overflowMode = TextOverflowModes.Overflow;
+
+        heartsText.UpdateMeshPadding();
     }
 
     void UpdateLifeText()
     {
-        if (hpText != null)
+        if (lifeText != null)
         {
-            hpText.text =
-    "<color=#008800>ライフ：" +
-    FormatLifeValue(currentLife) +
-    " / " +
-    FormatLifeValue(maxLife) +
-    "</color>\n" +
-    "<color=#FF0000>" +
-    BuildLifeHearts() +
-    "</color>";
+            lifeText.text =
+                "ライフ：" +
+                FormatLifeValue(currentLife) +
+                " / " +
+                FormatLifeValue(maxLife);
+        }
+
+        if (heartsText != null)
+        {
+            heartsText.text = BuildLifeHearts();
         }
     }
 
@@ -422,11 +465,19 @@ public float hitObjectRemainSeconds = 2.0f;
     {
         int totalHearts = Mathf.Max(1, Mathf.RoundToInt(maxLife));
         float fractionalLife = currentLife - Mathf.Floor(currentLife);
-        int fullHearts = Mathf.Clamp(Mathf.FloorToInt(currentLife), 0, totalHearts);
-        bool hasHalfHeart = fractionalLife > Mathf.Epsilon && fullHearts < totalHearts;
+        int fullHearts = Mathf.Clamp(
+            Mathf.FloorToInt(currentLife),
+            0,
+            totalHearts);
+
+        bool hasHalfHeart =
+            fractionalLife > Mathf.Epsilon &&
+            fullHearts < totalHearts;
+
         bool partialHeartOpaque = fractionalLife >= 0.5f;
 
-        var builder = new StringBuilder(totalHearts * 26);
+        var builder = new StringBuilder(totalHearts * 15);
+
         for (int i = 0; i < totalHearts; i++)
         {
             if (i < fullHearts)
@@ -436,12 +487,12 @@ public float hitObjectRemainSeconds = 2.0f;
             else if (i == fullHearts && hasHalfHeart)
             {
                 builder.Append(partialHeartOpaque
-                    ? "♥ "
-                    : "<alpha=#55>♥<alpha=#FF> ");
+                    ? "<alpha=#FF>♥</alpha> "
+                    : "<alpha=#80>♥</alpha> ");
             }
             else
             {
-                builder.Append("<alpha=#00>♥<alpha=#FF> ");
+                builder.Append("<alpha=#00>♥</alpha> ");
             }
         }
 
@@ -528,7 +579,7 @@ public float hitObjectRemainSeconds = 2.0f;
         isGameOver = false;
         currentLife = Mathf.Max(0.1f, maxLife);
 
-        if (hpText != null)
+        if (lifeText != null || heartsText != null)
         {
             UpdateLifeText();
         }
