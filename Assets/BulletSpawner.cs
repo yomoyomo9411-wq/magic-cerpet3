@@ -111,6 +111,7 @@ public class BulletSpawner : MonoBehaviour
     private float tutorialElapsedTime;
     private int nextTutorialBallIndex;
     private bool mainScheduleStarted;
+    private bool tutorialPracticeHidden;
     private CarpetMove carpet;
 
     private void Start()
@@ -172,13 +173,19 @@ public class BulletSpawner : MonoBehaviour
                 continue;
             }
 
+            if (isTutorial && !tutorialPracticeHidden && entryIndex == 0)
+            {
+                tutorialPracticeHidden = true;
+                StartCoroutine(HidePracticeWhenFirstBallApproaches(spawnedBall));
+            }
+
             if (entry.useCircleChallenge)
             {
-                StartCoroutine(PauseCircleChallengeBeforeArrival(spawnedBall));
+                StartCoroutine(PauseCircleChallengeBeforeArrival(spawnedBall, 20f));
             }
             else if (!isTutorial && IsMainCircleChallengeBall(entry))
             {
-                StartCoroutine(PauseCircleChallengeBeforeArrival(spawnedBall));
+                StartCoroutine(PauseCircleChallengeBeforeArrival(spawnedBall, 8f));
             }
         }
 
@@ -256,10 +263,8 @@ public class BulletSpawner : MonoBehaviour
         return false;
     }
 
-    private IEnumerator PauseCircleChallengeBeforeArrival(GameObject spawnedBall)
+    private IEnumerator PauseCircleChallengeBeforeArrival(GameObject spawnedBall, float stopBeforeDistance)
     {
-        float stopBeforeDistance = 8f; // プレイヤーの何m手前で止めるか
-
         while (spawnedBall != null && player != null)
         {
             float zDistance = spawnedBall.transform.position.z - player.position.z;
@@ -273,6 +278,24 @@ public class BulletSpawner : MonoBehaviour
         }
 
         MagicCarpetGameFlow.PauseCircleChallenge("stekki");
+    }
+
+    private IEnumerator HidePracticeWhenFirstBallApproaches(GameObject spawnedBall)
+    {
+        const float hideDistance = 20f;
+
+        while (spawnedBall != null && player != null)
+        {
+            float zDistance = spawnedBall.transform.position.z - player.position.z;
+
+            if (zDistance <= hideDistance)
+            {
+                MagicCarpetGameFlow.HidePracticePrompt();
+                yield break;
+            }
+
+            yield return null;
+        }
     }
 
     private GameObject SpawnBall(BallScheduleEntry entry, bool isTutorial)
@@ -424,6 +447,7 @@ public class BulletSpawner : MonoBehaviour
         tutorialElapsedTime = 0f;
         nextTutorialBallIndex = 0;
         mainScheduleStarted = false;
+        tutorialPracticeHidden = false;
     }
 
     private Vector3 GetSafeVisualScale(Vector3 visualScale)

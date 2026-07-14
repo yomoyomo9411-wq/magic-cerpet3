@@ -122,12 +122,25 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
     public static void ReportTutorialSuccess()
     {
-        if (instance == null || instance.mainGameStarted || instance.waitingForMainStart || instance.IsResultLocked() || instance.tutorialFailureBlocksSuccess)
+        if (instance == null || instance.mainGameStarted || instance.waitingForMainStart || instance.tutorialFailureBlocksSuccess)
         {
             return;
         }
 
-        instance.ShowTutorialResult(instance.successObject, false);
+        instance.ShowTutorialResultWithoutPause(instance.successObject);
+    }
+
+    public static void HidePracticePrompt()
+    {
+        if (instance == null || instance.mainGameStarted)
+        {
+            return;
+        }
+
+        if (instance.practiceObject != null)
+        {
+            instance.practiceObject.SetActive(false);
+        }
     }
 
     public static void ReportTutorialFailure()
@@ -158,8 +171,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
             instance.circleChallengeAcceptResultsAt = 0f;
             instance.circleChallengeStopAt = 0f;
 
-            instance.ShowOnly(null);   // Successを表示しない
-            Time.timeScale = 1f;
+            instance.ShowTutorialResultWithoutPause(instance.successObject);
             return;
         }
 
@@ -409,11 +421,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
         waitingForCircleChallenge = true;
         circleChallengeOtherResults = 0;
         circleChallengeAcceptResultsAt = Time.unscaledTime + Mathf.Max(0f, circleChallengeResultDelaySeconds);
-        circleChallengeStopAt = GetCircleChallengeStopTime();
         pendingCircleChallengeShieldScore = 0;
         activeCircleChallengeAttemptSeconds = attemptSeconds > 0f
             ? attemptSeconds
             : circleChallengeAttemptSeconds;
+        circleChallengeStopAt = GetCircleChallengeStopTime();
         tutorialFailureBlocksSuccess = false;
         tutorialPauseEndsAt = Time.unscaledTime;
         ShowOnly(GetPromptObject(string.IsNullOrWhiteSpace(promptObjectName) ? stekkiObjectName : promptObjectName));
@@ -476,7 +488,22 @@ public class MagicCarpetGameFlow : MonoBehaviour
         tutorialResultEndsAt = Time.unscaledTime + resultDisplaySeconds;
         tutorialResultLockEndsAt = tutorialResultEndsAt + 0.25f;
         ShowOnly(resultObject);
-        Time.timeScale = 0f;
+        Time.timeScale = 1f;
+    }
+
+    private void ShowTutorialResultWithoutPause(GameObject resultObject)
+    {
+        if (resultObject == null)
+        {
+            return;
+        }
+
+        waitingForTutorialPause = false;
+        showingTutorialResult = true;
+        tutorialResultEndsAt = Time.unscaledTime + resultDisplaySeconds;
+        tutorialResultLockEndsAt = tutorialResultEndsAt + 0.25f;
+        ShowOnly(resultObject);
+        Time.timeScale = 1f;
     }
 
     private bool IsResultLocked()
