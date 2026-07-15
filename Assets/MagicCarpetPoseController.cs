@@ -554,7 +554,30 @@ public class MagicCarpetPoseController : MonoBehaviour
 
     public static void StartCircleDetection()
     {
-        instance?.SendCircleClassifierCommand("start");
+        if (instance == null)
+        {
+            return;
+        }
+
+        // 新しい検知なので、前回の結果をリセットする
+        instance.lastProcessedCircleResult = null;
+        instance.pendingCircleClassification = null;
+        instance.nextCirclePollTime = 0f;
+
+        instance.SendCircleClassifierCommand("start");
+    }
+
+    public static void CancelCircleDetection()
+    {
+        if (instance == null)
+        {
+            return;
+        }
+
+        instance.pendingCircleClassification = null;
+        instance.lastProcessedCircleResult = null;
+        instance.circleResultLabel = null;
+        instance.nextCirclePollTime = 0f;
     }
 
     private void SendCircleClassifierCommand(string command)
@@ -615,6 +638,12 @@ public class MagicCarpetPoseController : MonoBehaviour
 
     private void FlushCircleClassification()
     {
+
+        if (!MagicCarpetGameFlow.IsCircleChallengeActive)
+        {
+            pendingCircleClassification = null;
+            return;
+        }
         if (string.IsNullOrEmpty(pendingCircleClassification))
         {
             return;
@@ -630,9 +659,33 @@ public class MagicCarpetPoseController : MonoBehaviour
 
         Debug.Log($"Circle ML result: {pendingCircleClassification}");
         var normalized = pendingCircleClassification.ToLowerInvariant();
-        if (!normalized.Contains("\"status\":\"result\"") && !normalized.Contains("\"status\": \"result\""))
+
+        bool isComplete =
+            normalized.Contains("\"status\":\"complete\"")
+            || normalized.Contains("\"status\": \"complete\"");
+
+        if (isComplete)
         {
-            lastProcessedCircleResult = null;
+            if (pendingCircleClassification != lastProcessedCircleResult)
+            {
+                lastProcessedCircleResult = pendingCircleClassification;
+
+                if (MagicCarpetGameFlow.IsCircleChallengeActive)
+                {
+                    MagicCarpetGameFlow.ReportCircleChallengeComplete();
+                }
+            }
+
+            pendingCircleClassification = null;
+            return;
+        }
+
+        bool isResult =
+            normalized.Contains("\"status\":\"result\"")
+            || normalized.Contains("\"status\": \"result\"");
+
+        if (!isResult)
+        {
             pendingCircleClassification = null;
             return;
         }
