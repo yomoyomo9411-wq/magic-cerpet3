@@ -73,12 +73,6 @@ public class BulletSpawner : MonoBehaviour
 
     [Header("チュートリアルコース")]
     public bool repeatTutorialSchedule;
-    [Tooltip("チュートリアルの球が出た瞬間に一時停止する秒数")]
-    [Min(0f)]
-    public float tutorialPauseSecondsOnSpawn = 4f;
-    [Tooltip("Element 0から何番目まで一時停止するか。3ならElement 0, 1, 2, 3で止まります")]
-    [Min(0)]
-    public int tutorialPauseUntilElement = 3;
     [Tooltip("Timeがこの秒数のチュートリアル球は、見えた瞬間に追加で止めます")]
     public float tutorialSpecialPauseBallTime = 22f;
     [Tooltip("Timeがこの秒数のチュートリアル球はMiddleを表示します")]
@@ -196,55 +190,6 @@ public class BulletSpawner : MonoBehaviour
         }
     }
 
-    private float GetPauseSecondsForTutorialBall(BallScheduleEntry entry)
-    {
-        if (entry.pauseSecondsOnSpawn > 0f)
-        {
-            return entry.pauseSecondsOnSpawn;
-        }
-
-        if (IsSpecialPauseBall(entry))
-        {
-            return tutorialSpecialPauseSeconds;
-        }
-
-        return 0f;
-    }
-
-    private string GetDodgePromptForBall(BallScheduleEntry entry, List<BallScheduleEntry> activeSchedule)
-    {
-        if (Mathf.Abs(entry.time - tutorialSpecialPauseBallTime) <= 0.25f)
-        {
-            return "stekki";
-        }
-
-        if (Mathf.Abs(entry.time - tutorialMiddlePromptBallTime) <= 0.25f)
-        {
-            return "Middle";
-        }
-
-        if (entry.laneX < 0f)
-        {
-            return "Right";
-        }
-
-        if (entry.laneX > 0f)
-        {
-            return "Left";
-        }
-        if (Mathf.Abs(entry.laneX) <= 0.01f)
-        {
-            return "Middle";
-        }
-
-        return "Practice";
-    }
-
-    private bool IsSpecialPauseBall(BallScheduleEntry entry)
-    {
-        return Mathf.Abs(entry.time - tutorialSpecialPauseBallTime) <= 0.25f;
-    }
-
     private bool IsMainCircleChallengeBall(BallScheduleEntry entry)
     {
         if (mainCircleChallengeBallTimes == null)
@@ -286,7 +231,6 @@ public class BulletSpawner : MonoBehaviour
         {
             if (spawnedBall.transform.position.z <= player.position.z)
             {
-                MagicCarpetGameFlow.HideMove2Prompt();
                 yield break;
             }
 

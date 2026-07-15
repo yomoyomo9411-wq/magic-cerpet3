@@ -88,6 +88,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     private bool hasInitialPlayerPose;
     private bool waitingForMainStart;
     private bool mainGameStarted;
+    private bool canCheckMainStart;
     private bool waitingForTutorialPause;
     private float tutorialPauseEndsAt;
     private bool showingTutorialResult;
@@ -102,8 +103,6 @@ public class MagicCarpetGameFlow : MonoBehaviour
     private bool waitingAtTitleScreen;
     private bool tutorialFailureBlocksSuccess;
     private Coroutine tutorialIntroCoroutine;
-    private bool move2PromptShown;
-    private bool tutorialSecondBallPassed;
 
     public static bool IsMainGameStarted => instance == null || instance.mainGameStarted;
     public static bool HasReachedMainStartLine => instance != null && (instance.waitingForMainStart || instance.mainGameStarted);
@@ -155,6 +154,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
             instance.circleFailureCoroutine = null;
         }
 
+        if (!instance.mainGameStarted)
+        {
+            instance.canCheckMainStart = true;
+        }
+
         instance.ShowOnly(null);
         Time.timeScale = 1f;
 
@@ -187,23 +191,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         {
             return;
         }
-
-        // Practiceは本番開始前まで残す
         instance.SetVisible(instance.rule1Object, false);
-    }
-
-    public static void HideMove2Prompt()
-    {
-        if (instance == null || instance.mainGameStarted)
-        {
-            return;
-        }
-
-        instance.tutorialSecondBallPassed = true;
-        if (instance.move2PromptShown)
-        {
-            instance.SetVisible(instance.move2Object, false);
-        }
     }
 
     public static void ReportTutorialFailure()
@@ -232,6 +220,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
             instance.waitingForTutorialPause = false;
             instance.circleChallengeOtherResults = 0;
             instance.circleChallengeAcceptResultsAt = 0f;
+
+            if (!instance.mainGameStarted)
+            {
+                instance.canCheckMainStart = true;
+            }
 
             instance.ShowTutorialResultWithoutPause(instance.successObject);
             return;
@@ -305,8 +298,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         pendingCircleChallengeShieldScore = 0;
         tutorialFailureBlocksSuccess = false;
         waitingAtTitleScreen = false;
-        move2PromptShown = false;
-        tutorialSecondBallPassed = false;
+        canCheckMainStart = false;
         ValidateUiReferences();
         ApplyPracticeTextStyle();
 
@@ -352,6 +344,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
                 pendingCircleChallengeShieldScore = 0;
                 ShowOnly(null);
                 Time.timeScale = 1f;
+                canCheckMainStart = true;
             }
 
             return;
@@ -361,17 +354,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         {
             showingTutorialResult = false;
 
-            // 2個目の球をまだ通過していなければmove2を再表示
-            if (!mainGameStarted
-                && move2PromptShown
-                && !tutorialSecondBallPassed)
-            {
-                ShowOnly(move2Object);
-            }
-            else
-            {
                 ShowOnly(null);
-            }
 
             Time.timeScale = 1f;
         }
@@ -383,7 +366,9 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
         if (!waitingForMainStart)
         {
-            if (player != null && player.position.z >= mainStartZ)
+            if (canCheckMainStart
+                && player != null
+                && player.position.z >= mainStartZ)
             {
                 StopAtMainStartLine();
             }
@@ -403,6 +388,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     private void StopAtMainStartLine()
     {
         waitingForTutorialPause = false;
+        canCheckMainStart = false;
         waitingForCircleChallenge = false;
         circleChallengeOtherResults = 0;
         circleChallengeAcceptResultsAt = 0f;
@@ -576,6 +562,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
         ShowOnly(null);
         Time.timeScale = 1f;
 
+        if (!mainGameStarted)
+        {
+            canCheckMainStart = true;
+        }
+
         Debug.Log("Circle challenge skipped by Enter.");
     }
 
@@ -609,17 +600,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         tutorialResultEndsAt = Time.unscaledTime + resultDisplaySeconds;
         tutorialResultLockEndsAt = tutorialResultEndsAt + 0.25f;
 
-        if (!mainGameStarted
-            && move2PromptShown
-            && !tutorialSecondBallPassed)
-        {
-            ShowOnly(resultObject, move2Object);
-        }
-        else
-        {
             ShowOnly(resultObject);
-        }
-
         Time.timeScale = 1f;
     }
 
@@ -635,16 +616,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         tutorialResultEndsAt = Time.unscaledTime + resultDisplaySeconds;
         tutorialResultLockEndsAt = tutorialResultEndsAt + 0.25f;
 
-        if (!mainGameStarted
-            && move2PromptShown
-            && !tutorialSecondBallPassed)
-        {
-            ShowOnly(resultObject, move2Object);
-        }
-        else
-        {
-            ShowOnly(resultObject);
-        }
+        ShowOnly(resultObject);
 
         Time.timeScale = 1f;
     }
@@ -668,18 +640,14 @@ public class MagicCarpetGameFlow : MonoBehaviour
             circleChallengeAcceptResultsAt = 0f;
             pendingCircleChallengeShieldScore = 0;
 
+            if (!mainGameStarted)
+            {
+                canCheckMainStart = true;
+            }
+
             ShowOnly(null);
             Time.timeScale = 1f;
             yield break;
-        }
-
-        if (waitingForCircleChallenge)
-        {
-            ShowOnly(circleTestObject);
-        }
-        else
-        {
-            ShowOnly(null);
         }
     }
 
@@ -729,6 +697,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         mainGameStarted = false;
         waitingForMainStart = false;
+        canCheckMainStart = false;
         waitingForTutorialPause = false;
         waitingForCircleChallenge = false;
         showingTutorialResult = false;
@@ -784,6 +753,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
         mainGameStarted = false;
         waitingForMainStart = false;
+        canCheckMainStart = false;
         waitingForTutorialPause = false;
         waitingForCircleChallenge = false;
         showingTutorialResult = false;
@@ -793,8 +763,6 @@ public class MagicCarpetGameFlow : MonoBehaviour
         tutorialFailureBlocksSuccess = false;
         tutorialResultLockEndsAt = 0f;
         waitingAtTitleScreen = false;
-        move2PromptShown = false;
-        tutorialSecondBallPassed = false;
 
         ResetSpawners();
         ShowOnly(practiceObject);
@@ -865,7 +833,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
             string name = obj.name.ToLower();
 
-            if (name.Contains("castle") || name.Contains("plane"))
+            if (name.Contains("castle"))
             {
                 mainStartObjects.Add(obj);
             }
@@ -1119,10 +1087,13 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
             if (!mainGameStarted && !waitingForMainStart && !waitingForTutorialPause)
             {
-                move2PromptShown = true;
-                if (!tutorialSecondBallPassed)
+                ShowOnly(move2Object);
+
+                yield return new WaitForSecondsRealtime(6f);
+
+                if (!mainGameStarted && !waitingForMainStart && !waitingForTutorialPause)
                 {
-                    ShowOnly(move2Object);
+                    ShowOnly(null);
                 }
             }
         }

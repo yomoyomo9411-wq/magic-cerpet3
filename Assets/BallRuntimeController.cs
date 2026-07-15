@@ -11,14 +11,13 @@ public class BallRuntimeController : MonoBehaviour
     private CarpetMove carpet;
     private Collider[] ballColliders;
     private Collider[] playerColliders;
-    private Renderer[] ballRenderers;
+
     private bool hitReported;
     private bool passReported;
 
     private void Awake()
     {
         ballColliders = GetComponentsInChildren<Collider>(true);
-        ballRenderers = GetComponentsInChildren<Renderer>(true);
     }
 
     private void Start()
@@ -50,6 +49,22 @@ public class BallRuntimeController : MonoBehaviour
         enabled = false;
     }
 
+    public void DisableAllColliders()
+    {
+        if (ballColliders == null)
+        {
+            return;
+        }
+
+        foreach (var collider in ballColliders)
+        {
+            if (collider != null)
+            {
+                collider.enabled = false;
+            }
+        }
+    }
+
     private void Update()
     {
         transform.position += velocity * Time.deltaTime;
@@ -59,8 +74,10 @@ public class BallRuntimeController : MonoBehaviour
             return;
         }
 
-        // ��ɓ����蔻�������
-        if (!hitReported && IsNearPlayerForTouchCheck() && IsTouchingPlayer())
+        // プレイヤーとの接触判定
+        if (!hitReported &&
+            IsNearPlayerForTouchCheck() &&
+            IsTouchingPlayer())
         {
             hitReported = true;
             passReported = true;
@@ -73,20 +90,24 @@ public class BallRuntimeController : MonoBehaviour
             return;
         }
 
-        // ���̂��ƒʉߔ��������
+        // 球がプレイヤーを完全に通過したか判定
         if (GetFrontZ() < player.position.z)
         {
             if (!hitReported && !passReported)
             {
                 passReported = true;
 
-                var reporter = GetComponentInParent<TutorialBallResultReporter>();
+                var reporter =
+                    GetComponentInParent<TutorialBallResultReporter>();
+
                 if (reporter == null)
                 {
-                    reporter = GetComponentInChildren<TutorialBallResultReporter>();
+                    reporter =
+                        GetComponentInChildren<TutorialBallResultReporter>();
                 }
 
-                if (reporter != null && !MagicCarpetGameFlow.IsMainGameStarted)
+                if (reporter != null &&
+                    !MagicCarpetGameFlow.IsMainGameStarted)
                 {
                     reporter.ReportPassSuccess();
                 }
@@ -99,7 +120,6 @@ public class BallRuntimeController : MonoBehaviour
             velocity = Vector3.zero;
             enabled = false;
             Destroy(gameObject, 5f);
-            return;
         }
     }
 
@@ -129,12 +149,7 @@ public class BallRuntimeController : MonoBehaviour
     {
         Physics.SyncTransforms();
 
-        if (playerColliders == null)
-        {
-            return false;
-        }
-
-        if (ballColliders == null)
+        if (playerColliders == null || ballColliders == null)
         {
             return false;
         }
@@ -178,59 +193,8 @@ public class BallRuntimeController : MonoBehaviour
             return false;
         }
 
-        return Mathf.Abs(transform.position.z - player.position.z) <= touchCheckDistance;
-    }
-    private bool VisualBoundsTouchPlayer()
-    {
-        var visualBounds = GetVisibleBounds();
-        if (!visualBounds.HasValue)
-        {
-            return false;
-        }
-
-        foreach (var playerCollider in playerColliders)
-        {
-            if (playerCollider == null || !playerCollider.enabled)
-            {
-                continue;
-            }
-
-            if (visualBounds.Value.Intersects(playerCollider.bounds))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private Bounds? GetVisibleBounds()
-    {
-        if (ballRenderers == null)
-        {
-            return null;
-        }
-
-        Bounds? bounds = null;
-        foreach (var renderer in ballRenderers)
-        {
-            if (renderer == null || !renderer.enabled)
-            {
-                continue;
-            }
-
-            if (!bounds.HasValue)
-            {
-                bounds = renderer.bounds;
-            }
-            else
-            {
-                var merged = bounds.Value;
-                merged.Encapsulate(renderer.bounds);
-                bounds = merged;
-            }
-        }
-
-        return bounds;
+        return Mathf.Abs(
+            transform.position.z - player.position.z
+        ) <= touchCheckDistance;
     }
 }

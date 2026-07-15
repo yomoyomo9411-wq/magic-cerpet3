@@ -34,7 +34,7 @@ public class MagicCarpetPoseController : MonoBehaviour
     public int fallbackCameraIndex = 0;
     public int requestedCameraWidth = 640;
     public int requestedCameraHeight = 480;
-    public int requestedCameraFps = 30;
+    public int requestedCameraFps = 20;
     public bool showPoseCameraPreview = false;
     [Range(0.1f, 1f)]
     public float poseCameraPreviewWidthRatio = 0.5f;
@@ -148,6 +148,12 @@ public class MagicCarpetPoseController : MonoBehaviour
 
         while (enabled && webCamTexture != null && webCamTexture.isPlaying)
         {
+            if (!webCamTexture.didUpdateThisFrame)
+            {
+                yield return null;
+                continue;
+            }
+
             if (!textureFramePool.TryGetTextureFrame(out var textureFrame))
             {
                 yield return null;

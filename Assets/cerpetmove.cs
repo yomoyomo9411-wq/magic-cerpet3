@@ -245,6 +245,7 @@ public float hitObjectRemainSeconds = 2.0f;
         }
 
         var runtime = bulletRoot.GetComponent<BallRuntimeController>();
+
         if (runtime != null)
         {
             if (!runtime.ClaimHit())
@@ -253,17 +254,14 @@ public float hitObjectRemainSeconds = 2.0f;
             }
 
             runtime.StopAfterHit();
+            runtime.DisableAllColliders();
         }
 
-        foreach (var collider in bulletRoot.GetComponentsInChildren<Collider>(true))
-        {
-            collider.enabled = false;
-        }
 
         Destroy(bulletRoot);
     }
 
-    public void SetHpVisible(bool visible)
+public void SetHpVisible(bool visible)
     {
         if (lifeText != null)
         {
@@ -315,14 +313,11 @@ public float hitObjectRemainSeconds = 2.0f;
         }
 
         var runtime = bulletRoot.GetComponent<BallRuntimeController>();
+
         if (runtime != null)
         {
             runtime.StopAfterHit();
-        }
-
-        foreach (var collider in bulletRoot.GetComponentsInChildren<Collider>(true))
-        {
-            collider.enabled = false;
+            runtime.DisableAllColliders();
         }
 
         StartCoroutine(DestroyBulletAfterDelay(bulletRoot));
