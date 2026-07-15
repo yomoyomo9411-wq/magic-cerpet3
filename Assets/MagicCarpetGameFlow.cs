@@ -239,26 +239,19 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
         instance.circleChallengeOtherResults++;
 
+        bool isLastAttempt =
+            instance.circleChallengeOtherResults >=
+            Mathf.Max(1, instance.circleChallengeMaxOtherResults);
+
         if (instance.circleFailureCoroutine != null)
         {
             instance.StopCoroutine(instance.circleFailureCoroutine);
         }
 
         instance.circleFailureCoroutine =
-            instance.StartCoroutine(instance.ShowCircleFailureRoutine());
-
-        if (instance.circleChallengeOtherResults < Mathf.Max(1, instance.circleChallengeMaxOtherResults))
-        {
-            return;
-        }
-
-        instance.waitingForCircleChallenge = false;
-        instance.waitingForTutorialPause = false;
-        instance.circleChallengeOtherResults = 0;
-        instance.circleChallengeAcceptResultsAt = 0f;
-        instance.pendingCircleChallengeShieldScore = 0;
-        instance.ShowOnly(null);
-        Time.timeScale = 1f;
+            instance.StartCoroutine(
+                instance.ShowCircleFailureRoutine(isLastAttempt)
+            );
     }
 
     public static int ConsumeCircleChallengeShieldScore(int defaultScore)
@@ -656,7 +649,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-    private IEnumerator ShowCircleFailureRoutine()
+    private IEnumerator ShowCircleFailureRoutine(bool finishAfterDisplay)
     {
         ShowOnly(failureObject);
 
@@ -665,6 +658,20 @@ public class MagicCarpetGameFlow : MonoBehaviour
         );
 
         circleFailureCoroutine = null;
+
+        if (finishAfterDisplay)
+        {
+            waitingForCircleChallenge = false;
+            waitingForTutorialPause = false;
+            circleChallengeDetectionStarted = false;
+            circleChallengeOtherResults = 0;
+            circleChallengeAcceptResultsAt = 0f;
+            pendingCircleChallengeShieldScore = 0;
+
+            ShowOnly(null);
+            Time.timeScale = 1f;
+            yield break;
+        }
 
         if (waitingForCircleChallenge)
         {

@@ -235,6 +235,34 @@ public float hitObjectRemainSeconds = 2.0f;
     {
     }
 
+    public void DestroyBulletImmediately(GameObject bulletObject)
+    {
+        var bulletRoot = GetBulletRoot(bulletObject);
+
+        if (bulletRoot == null)
+        {
+            return;
+        }
+
+        var runtime = bulletRoot.GetComponent<BallRuntimeController>();
+        if (runtime != null)
+        {
+            if (!runtime.ClaimHit())
+            {
+                return;
+            }
+
+            runtime.StopAfterHit();
+        }
+
+        foreach (var collider in bulletRoot.GetComponentsInChildren<Collider>(true))
+        {
+            collider.enabled = false;
+        }
+
+        Destroy(bulletRoot);
+    }
+
     public void SetHpVisible(bool visible)
     {
         if (lifeText != null)
