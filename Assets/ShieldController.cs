@@ -25,8 +25,18 @@ public class ShieldController : MonoBehaviour
     [Tooltip("モンスター命中時に表示する赤いエフェクト")]
     public GameObject monsterHitEffect;
 
+    [Tooltip("魔法エフェクトの大きさ")]
+    public Vector3 magicProjectileScale = Vector3.one;
+
+    [Tooltip("魔法エフェクトの向きの追加調整")]
+    public Vector3 magicProjectileRotationOffset = Vector3.zero;
+
     [Tooltip("魔法の発射位置。空ならプレイヤー位置を基準にします")]
     public Transform magicProjectileSpawnPoint;
+
+    [Tooltip("魔法弾が命中後も残る時間")]
+    [Min(0f)]
+    public float magicProjectileRemainSeconds = 0.5f;
 
     [Tooltip("発射位置の調整")]
     public Vector3 magicProjectileSpawnOffset =
@@ -121,6 +131,95 @@ public class ShieldController : MonoBehaviour
 
             magicAttackCoroutine =
                 StartCoroutine(MagicAttackRoutine(target));
+        }
+    }
+
+    private IEnumerator FlashMonsterRed(GameObject target, float duration)
+    {
+        if (target == null)
+        {
+            yield break;
+        }
+
+        Renderer[] renderers =
+            target.GetComponentsInChildren<Renderer>(true);
+
+        var materials =
+            new System.Collections.Generic.List<Material>();
+
+        var originalColors =
+            new System.Collections.Generic.List<Color>();
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            foreach (Material material in renderer.materials)
+            {
+                if (material == null)
+                {
+                    continue;
+                }
+
+                string colorProperty = null;
+
+                if (material.HasProperty("_BaseColor"))
+                {
+                    colorProperty = "_BaseColor";
+                }
+                else if (material.HasProperty("_Color"))
+                {
+                    colorProperty = "_Color";
+                }
+
+                if (colorProperty == null)
+                {
+                    continue;
+                }
+
+                Color originalColor =
+                    material.GetColor(colorProperty);
+
+                materials.Add(material);
+                originalColors.Add(originalColor);
+
+                Color redAdded = originalColor + new Color(0.8f, 0f, 0f, 0f);
+                redAdded.a = originalColor.a;
+
+                material.SetColor(colorProperty, redAdded);
+            }
+        }
+
+        yield return new WaitForSecondsRealtime(
+            Mathf.Max(0.01f, duration)
+        );
+
+        for (int i = 0; i < materials.Count; i++)
+        {
+            Material material = materials[i];
+
+            if (material == null)
+            {
+                continue;
+            }
+
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor(
+                    "_BaseColor",
+                    originalColors[i]
+                );
+            }
+            else if (material.HasProperty("_Color"))
+            {
+                material.SetColor(
+                    "_Color",
+                    originalColors[i]
+                );
+            }
         }
     }
 
@@ -400,6 +499,8 @@ public class ShieldController : MonoBehaviour
             );
 
         projectile.name = "Magic Projectile Runtime";
+        projectile.transform.localScale =
+    magicProjectileScale;
         projectile.SetActive(true);
 
         SetParticleSystemsToUnscaled(projectile);
@@ -425,7 +526,10 @@ public class ShieldController : MonoBehaviour
             if (direction.sqrMagnitude > 0.0001f)
             {
                 projectile.transform.rotation =
-                    Quaternion.LookRotation(direction);
+                    Quaternion.LookRotation(direction)
+                    *Quaternion.Euler(
+                       magicProjectileRotationOffset
+                     );
             }
 
             float distance =
@@ -447,8 +551,24 @@ public class ShieldController : MonoBehaviour
         {
             if (projectile != null)
             {
-                Destroy(projectile);
+                Destroy(
+                    projectile,
+                    Mathf.Max(0f, magicProjectileRemainSeconds)
+                );
             }
+
+            // 命中した敵本体を一瞬赤くする
+            StartCoroutine(
+                FlashMonsterRed(
+                    target,
+                    monsterHitEffectSeconds
+                )
+            );
+
+            // 赤い演出を見せる
+            yield return new WaitForSecondsRealtime(
+                Mathf.Max(0f, monsterHitEffectSeconds)
+            );
 
             MagicCarpetGameFlow.CompleteMagicAttack();
             magicAttackCoroutine = null;
@@ -470,26 +590,6 @@ public class ShieldController : MonoBehaviour
             Destroy(projectile);
         }
 
-        // 赤い命中エフェクトを表示
-        GameObject hitEffect = null;
-
-        if (monsterHitEffect != null)
-        {
-            hitEffect =
-                Instantiate(
-                    monsterHitEffect,
-                    GetTargetPosition(target)
-                    + monsterHitEffectOffset,
-                    Quaternion.identity
-                );
-
-            hitEffect.name =
-                "Monster Hit Effect Runtime";
-
-            hitEffect.SetActive(true);
-            SetParticleSystemsToUnscaled(hitEffect);
-        }
-
         // 赤い演出を見せる
         yield return new WaitForSecondsRealtime(
             Mathf.Max(0f, monsterHitEffectSeconds)
@@ -502,12 +602,6 @@ public class ShieldController : MonoBehaviour
 
         // 命中した時点でゲーム進行を再開
         MagicCarpetGameFlow.CompleteMagicAttack();
-
-        // 赤いエフェクトは残り時間を再生してから消す
-        if (hitEffect != null)
-        {
-            Destroy(hitEffect, 2f);
-        }
 
         magicAttackCoroutine = null;
     }

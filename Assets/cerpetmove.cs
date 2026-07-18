@@ -61,7 +61,6 @@ public float hitObjectRemainSeconds = 2.0f;
 
     void Start()
     {
-        Time.timeScale = 1f;
         currentLife = Mathf.Max(0.1f, maxLife);
 
 

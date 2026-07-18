@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections;
 using TMPro;
+using UnityEngine.EventSystems;
+using UnityEngine.VFX;
 
 public class MagicCarpetGameFlow : MonoBehaviour
 {
@@ -13,19 +15,24 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
     private static MagicCarpetGameFlow instance;
     [Header("Tutorial Zone")]
-    public float tutorialStartZ = -250f;
+    public float tutorialStartZ = -800f;
     public float mainStartZ = 0f;
 
     [Header("Audio")]
     public AudioSource bgmSource;
     public float bgmFadeOutSeconds = 4f;
 
+    [Header("Title Visual Effect")]
+    public VisualEffect starfieldEffect;
 
     [Header("Development")]
     public DevelopmentStartMode developmentStartMode = DevelopmentStartMode.Tutorial;
 
     [Header("Main Game Start")]
     public KeyCode startKey = KeyCode.Return;
+
+    [Header("Start Button")]
+    public GameObject startButtonObject;
 
     public float autoMainStartSeconds = 10f;
     private float autoMainStartAt;
@@ -343,6 +350,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         instance = this;
         player = FindFirstObjectByType<CarpetMove>()?.transform;
+
         if (player != null)
         {
             initialPlayerPosition = player.position;
@@ -362,16 +370,75 @@ public class MagicCarpetGameFlow : MonoBehaviour
         circleChallengeAcceptResultsAt = 0f;
         pendingCircleChallengeShieldScore = 0;
         tutorialFailureBlocksSuccess = false;
-        waitingAtTitleScreen = false;
         canCheckMainStart = false;
+
         ValidateUiReferences();
         ApplyPracticeTextStyle();
-
         SetMainStartObjectsVisible(false);
+
+        // 最初はタイトル画面で待機
+        waitingAtTitleScreen = true;
+
+        if (starfieldEffect != null)
+        {
+            starfieldEffect.Reinit();
+            starfieldEffect.Play();
+        }
+
+        Time.timeScale = 0f;
+
+        // 開発用モードだけ直接開始
+        if (developmentStartMode != DevelopmentStartMode.Tutorial)
+        {
+            if (startButtonObject != null)
+            {
+                startButtonObject.SetActive(false);
+            }
+
+            waitingAtTitleScreen = false;
+            ApplyDevelopmentStartMode();
+        }
+    }
+
+    public void StartGameFromButton()
+    {
+        if (!waitingAtTitleScreen)
+        {
+            return;
+        }
+
+        waitingAtTitleScreen = false;
+        waitingForMainStart = false;
+        waitingForTutorialPause = false;
+        waitingForCircleChallenge = false;
+        waitingForMagicAttack = false;
+
+        showingTutorialResult = false;
+        circleChallengeDetectionStarted = false;
+        circleChallengeOtherResults = 0;
+        circleChallengeAcceptResultsAt = 0f;
+        pendingCircleChallengeShieldScore = 0;
+
+        activeCircleChallengeTarget = null;
+        canCheckMainStart = false;
+        mainGameStarted = false;
+
+        if (EventSystem.current != null &&
+     EventSystem.current.currentSelectedGameObject != null)
+        {
+            EventSystem.current.currentSelectedGameObject.SetActive(false);
+        }
+
+        if (startButtonObject != null)
+        {
+            startButtonObject.SetActive(false);
+        }
+
         ShowOnly(practiceObject);
         Time.timeScale = 1f;
         BeginTutorialIntro();
-        ApplyDevelopmentStartMode();
+
+        Debug.Log("Game started from Start button.");
     }
 
     private void Update()
@@ -396,10 +463,18 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
             if (waitingForCircleChallenge)
             {
+                // Enter：軌跡検知をスキップ
                 if (Input.GetKeyDown(KeyCode.Return) ||
                     Input.GetKeyDown(KeyCode.KeypadEnter))
                 {
                     SkipCircleChallenge();
+                    return;
+                }
+
+                // テスト用：Spaceで強制成功
+                if (Input.GetKeyDown(KeyCode.Space))
+                {
+                    ForceCircleChallengeSuccess();
                     return;
                 }
 
@@ -618,6 +693,42 @@ public class MagicCarpetGameFlow : MonoBehaviour
         }
 
         Debug.Log("Circle challenge paused the game.");
+    }
+
+    private void ForceCircleChallengeSuccess()
+    {
+        if (!waitingForCircleChallenge)
+        {
+            return;
+        }
+
+        // Python側の検知を停止
+        MagicCarpetPoseController.CancelCircleDetection();
+
+        pendingCircleChallengeShieldScore =
+            GetCircleChallengeScoreForAttempt(
+                circleChallengeOtherResults + 1
+            );
+
+        waitingForCircleChallenge = false;
+        circleChallengeDetectionStarted = false;
+        circleChallengeOtherResults = 0;
+        circleChallengeAcceptResultsAt = 0f;
+
+        waitingForTutorialPause = true;
+        waitingForMagicAttack = true;
+
+        ShowCircleChallengeSuccessWhilePaused();
+
+        ShieldController shieldController =
+            FindFirstObjectByType<ShieldController>();
+
+        if (shieldController != null)
+        {
+            shieldController.ActivateShield();
+        }
+
+        Debug.Log("Circle challenge forced success by Space.");
     }
 
     private void SkipCircleChallenge()
@@ -848,6 +959,11 @@ public class MagicCarpetGameFlow : MonoBehaviour
         ClearActiveBullets();
         SetMainStartObjectsVisible(false);
         ShowOnly(titleObject);
+        if (startButtonObject != null)
+        {
+            startButtonObject.SetActive(true);
+        }
+
         Time.timeScale = 0f;
 
         var carpetMove = player != null ? player.GetComponent<CarpetMove>() : null;
@@ -859,6 +975,8 @@ public class MagicCarpetGameFlow : MonoBehaviour
         if (bgmSource != null)
         {
             bgmSource.Stop();
+            bgmSource.time = 0f;
+            bgmSource.Play();
         }
 
         Debug.Log("Returned to title screen. Press Enter again to start.");
