@@ -13,7 +13,7 @@ public class CarpetMove : MonoBehaviour
 
     public float minX = -8f;
     public float maxX = 8f;
-    public float autoReturnToTitleSeconds = 30f;
+    public float autoReturnToTitleSeconds = 15f;
     public AudioSource tutorialAmbientSource;
     private float goalEnteredAt;
 

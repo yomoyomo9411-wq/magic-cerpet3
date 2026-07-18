@@ -18,6 +18,37 @@ public class ShieldController : MonoBehaviour
     public float appearSeconds = 0.16f;
     public float disappearSeconds = 0.12f;
 
+    [Header("Magic Attack")]
+    [Tooltip("前方へ飛ばす魔法エフェクト。シーン内の非表示オブジェクトでも可")]
+    public GameObject magicProjectileEffect;
+
+    [Tooltip("モンスター命中時に表示する赤いエフェクト")]
+    public GameObject monsterHitEffect;
+
+    [Tooltip("魔法の発射位置。空ならプレイヤー位置を基準にします")]
+    public Transform magicProjectileSpawnPoint;
+
+    [Tooltip("発射位置の調整")]
+    public Vector3 magicProjectileSpawnOffset =
+        new Vector3(0f, 1.3f, 3f);
+
+    [Tooltip("魔法陣を出してから魔法を発射するまでの時間")]
+    public float magicAttackDelay = 0.5f;
+
+    [Tooltip("魔法が飛ぶ速さ")]
+    public float magicProjectileSpeed = 25f;
+
+    [Tooltip("この距離まで近づいたら命中扱い")]
+    public float magicHitDistance = 0.8f;
+
+    [Tooltip("命中後、赤いエフェクトを見せる時間")]
+    public float monsterHitEffectSeconds = 0.2f;
+
+    [Tooltip("赤いエフェクトの位置調整")]
+    public Vector3 monsterHitEffectOffset = Vector3.zero;
+
+    private Coroutine magicAttackCoroutine;
+
     [Header("Shield Sound")]
     public AudioSource shieldSeSource;
     public AudioClip shieldActivateSound;
@@ -38,6 +69,16 @@ public class ShieldController : MonoBehaviour
         if (shieldEffect != null)
         {
             shieldEffect.SetActive(false);
+        }
+
+        if (magicProjectileEffect != null)
+        {
+            magicProjectileEffect.SetActive(false);
+        }
+
+        if (monsterHitEffect != null)
+        {
+            monsterHitEffect.SetActive(false);
         }
 
         shieldVisibleTarget = false;
@@ -66,6 +107,20 @@ public class ShieldController : MonoBehaviour
         if (shieldSeSource != null && shieldActivateSound != null)
         {
             shieldSeSource.PlayOneShot(shieldActivateSound);
+        }
+
+        var target =
+    MagicCarpetGameFlow.GetCircleChallengeTarget();
+
+        if (target != null)
+        {
+            if (magicAttackCoroutine != null)
+            {
+                StopCoroutine(magicAttackCoroutine);
+            }
+
+            magicAttackCoroutine =
+                StartCoroutine(MagicAttackRoutine(target));
         }
     }
 
@@ -293,5 +348,236 @@ public class ShieldController : MonoBehaviour
     private float EaseIn(float t)
     {
         return t * t;
+    }
+
+    private IEnumerator MagicAttackRoutine(
+    GameObject target)
+    {
+        // 魔法陣展開後に0.5秒待つ
+        yield return new WaitForSecondsRealtime(
+            Mathf.Max(0f, magicAttackDelay)
+        );
+
+        if (target == null)
+        {
+            MagicCarpetGameFlow.CompleteMagicAttack();
+            magicAttackCoroutine = null;
+            yield break;
+        }
+
+        if (magicProjectileEffect == null)
+        {
+            Debug.LogWarning(
+                "Magic Projectile Effect is not assigned.",
+                this
+            );
+
+            MagicCarpetGameFlow.CompleteMagicAttack();
+            magicAttackCoroutine = null;
+            yield break;
+        }
+
+        Vector3 spawnPosition;
+
+        if (magicProjectileSpawnPoint != null)
+        {
+            spawnPosition =
+                magicProjectileSpawnPoint.position;
+        }
+        else
+        {
+            spawnPosition =
+                transform.TransformPoint(
+                    magicProjectileSpawnOffset
+                );
+        }
+
+        GameObject projectile =
+            Instantiate(
+                magicProjectileEffect,
+                spawnPosition,
+                Quaternion.identity
+            );
+
+        projectile.name = "Magic Projectile Runtime";
+        projectile.SetActive(true);
+
+        SetParticleSystemsToUnscaled(projectile);
+
+        while (projectile != null &&
+               target != null)
+        {
+            Vector3 targetPosition =
+                GetTargetPosition(target);
+
+            projectile.transform.position =
+                Vector3.MoveTowards(
+                    projectile.transform.position,
+                    targetPosition,
+                    Mathf.Max(0.01f, magicProjectileSpeed)
+                    * Time.unscaledDeltaTime
+                );
+
+            Vector3 direction =
+                targetPosition -
+                projectile.transform.position;
+
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                projectile.transform.rotation =
+                    Quaternion.LookRotation(direction);
+            }
+
+            float distance =
+                Vector3.Distance(
+                    projectile.transform.position,
+                    targetPosition
+                );
+
+            if (distance <=
+                Mathf.Max(0.01f, magicHitDistance))
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        if (target == null)
+        {
+            if (projectile != null)
+            {
+                Destroy(projectile);
+            }
+
+            MagicCarpetGameFlow.CompleteMagicAttack();
+            magicAttackCoroutine = null;
+            yield break;
+        }
+
+        // 命中したモンスターを停止
+        var runtime =
+            target.GetComponent<BallRuntimeController>();
+
+        if (runtime != null)
+        {
+            runtime.StopAfterHit();
+            runtime.DisableAllColliders();
+        }
+
+        if (projectile != null)
+        {
+            Destroy(projectile);
+        }
+
+        // 赤い命中エフェクトを表示
+        GameObject hitEffect = null;
+
+        if (monsterHitEffect != null)
+        {
+            hitEffect =
+                Instantiate(
+                    monsterHitEffect,
+                    GetTargetPosition(target)
+                    + monsterHitEffectOffset,
+                    Quaternion.identity
+                );
+
+            hitEffect.name =
+                "Monster Hit Effect Runtime";
+
+            hitEffect.SetActive(true);
+            SetParticleSystemsToUnscaled(hitEffect);
+        }
+
+        // 赤い演出を見せる
+        yield return new WaitForSecondsRealtime(
+            Mathf.Max(0f, monsterHitEffectSeconds)
+        );
+
+        if (target != null)
+        {
+            Destroy(target);
+        }
+
+        // 命中した時点でゲーム進行を再開
+        MagicCarpetGameFlow.CompleteMagicAttack();
+
+        // 赤いエフェクトは残り時間を再生してから消す
+        if (hitEffect != null)
+        {
+            Destroy(hitEffect, 2f);
+        }
+
+        magicAttackCoroutine = null;
+    }
+
+    private Vector3 GetTargetPosition(
+        GameObject target)
+    {
+        if (target == null)
+        {
+            return Vector3.zero;
+        }
+
+        var renderers =
+            target.GetComponentsInChildren<Renderer>(true);
+
+        bool foundRenderer = false;
+        Bounds combinedBounds = new Bounds();
+
+        foreach (var targetRenderer in renderers)
+        {
+            if (targetRenderer == null ||
+                !targetRenderer.enabled)
+            {
+                continue;
+            }
+
+            if (!foundRenderer)
+            {
+                combinedBounds = targetRenderer.bounds;
+                foundRenderer = true;
+            }
+            else
+            {
+                combinedBounds.Encapsulate(
+                    targetRenderer.bounds
+                );
+            }
+        }
+
+        if (foundRenderer)
+        {
+            return combinedBounds.center;
+        }
+
+        return target.transform.position;
+    }
+
+    private void SetParticleSystemsToUnscaled(
+        GameObject effectObject)
+    {
+        if (effectObject == null)
+        {
+            return;
+        }
+
+        var particleSystems =
+            effectObject.GetComponentsInChildren
+                <ParticleSystem>(true);
+
+        foreach (var particleSystem in particleSystems)
+        {
+            if (particleSystem == null)
+            {
+                continue;
+            }
+
+            var main = particleSystem.main;
+            main.useUnscaledTime = true;
+
+            particleSystem.Play(true);
+        }
     }
 }

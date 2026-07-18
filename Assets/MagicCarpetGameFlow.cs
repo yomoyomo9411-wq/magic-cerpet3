@@ -103,6 +103,8 @@ public class MagicCarpetGameFlow : MonoBehaviour
     private bool waitingAtTitleScreen;
     private bool tutorialFailureBlocksSuccess;
     private Coroutine tutorialIntroCoroutine;
+    private GameObject activeCircleChallengeTarget;
+    private bool waitingForMagicAttack;
 
     public static bool IsMainGameStarted => instance == null || instance.mainGameStarted;
     public static bool HasReachedMainStartLine => instance != null && (instance.waitingForMainStart || instance.mainGameStarted);
@@ -132,6 +134,36 @@ public class MagicCarpetGameFlow : MonoBehaviour
     public static void PauseCircleChallenge(string promptObjectName = null)
     {
         PauseCircleChallenge(promptObjectName, 0f);
+    }
+
+    public static void RegisterCircleChallengeTarget(GameObject target)
+    {
+        if (instance == null)
+        {
+            return;
+        }
+
+        instance.activeCircleChallengeTarget = target;
+    }
+
+    public static GameObject GetCircleChallengeTarget()
+    {
+        if (instance == null)
+        {
+            return null;
+        }
+
+        return instance.activeCircleChallengeTarget;
+    }
+
+    public static void ClearCircleChallengeTarget()
+    {
+        if (instance == null)
+        {
+            return;
+        }
+
+        instance.activeCircleChallengeTarget = null;
     }
 
     public static void ReportCircleChallengeComplete()
@@ -185,6 +217,33 @@ public class MagicCarpetGameFlow : MonoBehaviour
         instance.ShowTutorialResultWithoutPause(instance.successObject);
     }
 
+    public static void CompleteMagicAttack()
+    {
+        if (instance == null)
+        {
+            return;
+        }
+
+        instance.waitingForMagicAttack = false;
+        instance.waitingForCircleChallenge = false;
+        instance.waitingForTutorialPause = false;
+        instance.circleChallengeDetectionStarted = false;
+        instance.circleChallengeOtherResults = 0;
+        instance.circleChallengeAcceptResultsAt = 0f;
+
+        instance.activeCircleChallengeTarget = null;
+
+        instance.ShowOnly(null);
+        Time.timeScale = 1f;
+
+        if (!instance.mainGameStarted)
+        {
+            instance.canCheckMainStart = true;
+        }
+
+        Debug.Log("Magic attack completed. Game resumed.");
+    }
+
     public static void HidePracticePrompt()
     {
         if (instance == null || instance.mainGameStarted)
@@ -215,18 +274,23 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
         if (success)
         {
-            instance.pendingCircleChallengeShieldScore = instance.GetCircleChallengeScoreForAttempt(instance.circleChallengeOtherResults + 1);
+            instance.pendingCircleChallengeShieldScore =
+                instance.GetCircleChallengeScoreForAttempt(
+                    instance.circleChallengeOtherResults + 1
+                );
+
+            // 軌跡検知自体は終了
             instance.waitingForCircleChallenge = false;
-            instance.waitingForTutorialPause = false;
+            instance.circleChallengeDetectionStarted = false;
             instance.circleChallengeOtherResults = 0;
             instance.circleChallengeAcceptResultsAt = 0f;
 
-            if (!instance.mainGameStarted)
-            {
-                instance.canCheckMainStart = true;
-            }
+            // 魔法攻撃が終わるまでは画面停止を維持
+            instance.waitingForTutorialPause = true;
+            instance.waitingForMagicAttack = true;
 
-            instance.ShowTutorialResultWithoutPause(instance.successObject);
+            instance.ShowCircleChallengeSuccessWhilePaused();
+
             return;
         }
 
@@ -289,6 +353,7 @@ public class MagicCarpetGameFlow : MonoBehaviour
         mainGameStarted = false;
         waitingForMainStart = false;
         waitingForTutorialPause = false;
+        waitingForMagicAttack = false;
         showingTutorialResult = false;
         tutorialResultLockEndsAt = 0f;
         waitingForCircleChallenge = false;
@@ -313,23 +378,37 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         if (waitingForTutorialPause)
         {
+            // 魔法がモンスターに命中するまで硬直を維持
+            // 魔法がモンスターに命中するまで硬直を維持
+            if (waitingForMagicAttack)
+            {
+                // 「せいこう！」だけは設定時間後に消す
+                if (showingTutorialResult &&
+                    Time.unscaledTime >= tutorialResultEndsAt)
+                {
+                    showingTutorialResult = false;
+                    tutorialFailureBlocksSuccess = false;
+                    ShowOnly(null);
+                }
+
+                return;
+            }
+
             if (waitingForCircleChallenge)
             {
                 if (Input.GetKeyDown(KeyCode.Return) ||
-    Input.GetKeyDown(KeyCode.KeypadEnter))
+                    Input.GetKeyDown(KeyCode.KeypadEnter))
                 {
                     SkipCircleChallenge();
                     return;
                 }
 
-                if (!circleChallengeDetectionStarted
-                    && Time.unscaledTime >= circleChallengeAcceptResultsAt)
+                if (!circleChallengeDetectionStarted &&
+                    Time.unscaledTime >= circleChallengeAcceptResultsAt)
                 {
                     circleChallengeDetectionStarted = true;
 
-                    // rule2とmove2を消し、軌跡検知中の文字を表示
                     ShowOnly(circleTestObject);
-
                     MagicCarpetPoseController.StartCircleDetection();
                 }
 
@@ -356,12 +435,15 @@ public class MagicCarpetGameFlow : MonoBehaviour
     Time.unscaledTime >= tutorialResultEndsAt)
         {
             showingTutorialResult = false;
-
-            // 次の球の成功判定を受け付ける
             tutorialFailureBlocksSuccess = false;
 
             ShowOnly(null);
-            Time.timeScale = 1f;
+
+            // 軌跡検知対象が残っている間は停止を維持する
+            if (activeCircleChallengeTarget == null)
+            {
+                Time.timeScale = 1f;
+            }
         }
 
         if (mainGameStarted)
@@ -542,10 +624,14 @@ public class MagicCarpetGameFlow : MonoBehaviour
     {
         waitingForCircleChallenge = false;
         waitingForTutorialPause = false;
+        waitingForMagicAttack = false;
+
         circleChallengeDetectionStarted = false;
         circleChallengeOtherResults = 0;
         circleChallengeAcceptResultsAt = 0f;
         pendingCircleChallengeShieldScore = 0;
+
+        activeCircleChallengeTarget = null;
 
         // Failed表示の途中なら止める
         if (circleFailureCoroutine != null)
@@ -624,6 +710,21 @@ public class MagicCarpetGameFlow : MonoBehaviour
         ShowOnly(resultObject);
 
         Time.timeScale = 1f;
+    }
+
+    private void ShowCircleChallengeSuccessWhilePaused()
+    {
+        showingTutorialResult = true;
+        tutorialResultEndsAt =
+            Time.unscaledTime + resultDisplaySeconds;
+
+        tutorialResultLockEndsAt =
+            tutorialResultEndsAt + 0.25f;
+
+        ShowOnly(successObject);
+
+        // 魔法攻撃が終わるまでは停止を維持
+        Time.timeScale = 0f;
     }
 
     private IEnumerator ShowCircleFailureRoutine(

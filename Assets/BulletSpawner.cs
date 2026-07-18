@@ -208,11 +208,14 @@ public class BulletSpawner : MonoBehaviour
         return false;
     }
 
-    private IEnumerator PauseCircleChallengeBeforeArrival(GameObject spawnedBall, float stopBeforeDistance)
+    private IEnumerator PauseCircleChallengeBeforeArrival(
+    GameObject spawnedBall,
+    float stopBeforeDistance)
     {
         while (spawnedBall != null && player != null)
         {
-            float zDistance = spawnedBall.transform.position.z - player.position.z;
+            float zDistance =
+                spawnedBall.transform.position.z - player.position.z;
 
             if (zDistance <= stopBeforeDistance)
             {
@@ -221,6 +224,14 @@ public class BulletSpawner : MonoBehaviour
 
             yield return null;
         }
+
+        if (spawnedBall == null)
+        {
+            yield break;
+        }
+
+        // 今回、魔法で倒す対象として記録する
+        MagicCarpetGameFlow.RegisterCircleChallengeTarget(spawnedBall);
 
         MagicCarpetGameFlow.PauseCircleChallenge("stekki");
     }
