@@ -37,6 +37,10 @@ public class CarpetMove : MonoBehaviour
     private float currentLife;
     public TMP_Text lifeText;
     public TMP_Text heartsText;
+    [Header("Goal Remaining Life UI")]
+    public TMP_Text goalHeartsText;
+    public TMP_Text goalLifeText;
+
     public GameObject goalText;
     public DamageFlash damageFlash;
 
@@ -76,6 +80,16 @@ public float hitObjectRemainSeconds = 2.0f;
             goalText.SetActive(false);
         }
 
+        if (goalHeartsText != null)
+        {
+            goalHeartsText.text = "";
+        }
+
+        if (goalLifeText != null)
+        {
+            goalLifeText.text = "";
+        }
+
         if (lifeText != null)
         {
             ApplyLifeTextStyle();
@@ -86,6 +100,16 @@ public float hitObjectRemainSeconds = 2.0f;
         {
             ApplyHeartsTextStyle();
             heartsText.gameObject.SetActive(false);
+        }
+
+        if (goalLifeText != null)
+        {
+            ApplyGoalLifeTextStyle();
+        }
+
+        if (goalHeartsText != null)
+        {
+            ApplyGoalHeartsTextStyle();
         }
 
         UpdateLifeText();
@@ -226,8 +250,13 @@ public float hitObjectRemainSeconds = 2.0f;
             return;
         }
 
+        float feedbackIntensity =
+    GetHitFeedbackIntensity(damage);
+
+        // ゲームを停止する前に演出を開始
+        PlayDamageFeedback(feedbackIntensity);
+
         ApplyDamage(damage);
-        PlayDamageFeedback(GetHitFeedbackIntensity(damage));
         DestroyBulletObject(bulletRoot);
     }
 
@@ -428,6 +457,107 @@ public void SetHpVisible(bool visible)
         lifeText.UpdateMeshPadding();
     }
 
+    private void ApplyGoalLifeTextStyle()
+    {
+        if (goalLifeText == null)
+        {
+            return;
+        }
+
+        Material material = new Material(goalLifeText.fontSharedMaterial);
+
+        material.SetColor(
+            ShaderUtilities.ID_FaceColor,
+            Color.white
+        );
+
+        material.SetColor(
+            ShaderUtilities.ID_OutlineColor,
+            Color.white
+        );
+
+        material.SetFloat(
+            ShaderUtilities.ID_OutlineWidth,
+            0.2f
+        );
+
+        goalLifeText.fontMaterial = material;
+
+        // 元のLifeTextと同じ緑
+        goalLifeText.color = new Color32(0, 102, 0, 255);
+
+        goalLifeText.UpdateMeshPadding();
+    }
+
+    public void ResetForNextRun()
+    {
+        isGameOver = false;
+        currentLife = Mathf.Max(0.1f, maxLife);
+
+        if (tenkokuDynamicSky != null)
+        {
+            tenkokuDynamicSky.SetActive(true);
+        }
+
+        if (goalText != null)
+        {
+            goalText.SetActive(false);
+        }
+
+        if (gameOverText != null)
+        {
+            gameOverText.SetActive(false);
+        }
+
+        if (goalHeartsText != null)
+        {
+            goalHeartsText.gameObject.SetActive(false);
+        }
+
+        if (goalLifeText != null)
+        {
+            goalLifeText.gameObject.SetActive(false);
+        }
+
+        UpdateLifeText();
+        SetHpVisible(false);
+    }
+
+    private void ApplyGoalHeartsTextStyle()
+    {
+        if (goalHeartsText == null)
+        {
+            return;
+        }
+
+        Material material = new Material(goalHeartsText.fontSharedMaterial);
+
+        material.SetColor(
+            ShaderUtilities.ID_FaceColor,
+            Color.white
+        );
+
+        material.SetColor(
+            ShaderUtilities.ID_OutlineColor,
+            Color.white
+        );
+
+        material.SetFloat(
+            ShaderUtilities.ID_OutlineWidth,
+            0.2f
+        );
+
+        goalHeartsText.fontMaterial = material;
+
+        // 元のHeartsTextと同じ赤
+        goalHeartsText.color = Color.red;
+
+        goalHeartsText.enableWordWrapping = false;
+        goalHeartsText.overflowMode = TextOverflowModes.Overflow;
+
+        goalHeartsText.UpdateMeshPadding();
+    }
+
     private void ApplyHeartsTextStyle()
     {
         if (heartsText == null)
@@ -477,6 +607,68 @@ public void SetHpVisible(bool visible)
         {
             heartsText.text = BuildLifeHearts();
         }
+    }
+
+    void UpdateGoalLifeText()
+    {
+        if (goalHeartsText != null)
+        {
+            goalHeartsText.gameObject.SetActive(true);
+            goalHeartsText.text = BuildGoalHearts();
+            goalHeartsText.transform.SetAsLastSibling();
+        }
+
+        if (goalLifeText != null)
+        {
+            goalLifeText.gameObject.SetActive(true);
+            goalLifeText.text =
+                FormatLifeValue(currentLife) +
+                " / " +
+                FormatLifeValue(maxLife);
+
+            goalLifeText.transform.SetAsLastSibling();
+        }
+    }
+
+    string BuildGoalHearts()
+    {
+        int totalHearts = Mathf.Max(1, Mathf.RoundToInt(maxLife));
+
+        int fullHearts = Mathf.Clamp(
+            Mathf.FloorToInt(currentLife),
+            0,
+            totalHearts
+        );
+
+        float fractionalLife =
+            currentLife - Mathf.Floor(currentLife);
+
+        bool hasPartialHeart =
+            fractionalLife > Mathf.Epsilon &&
+            fullHearts < totalHearts;
+
+        bool partialHeartOpaque =
+            fractionalLife >= 0.5f;
+
+        var builder = new StringBuilder();
+
+        for (int i = 0; i < fullHearts; i++)
+        {
+            builder.Append("<alpha=#FF>♥ ");
+        }
+
+        if (hasPartialHeart)
+        {
+            builder.Append(
+                partialHeartOpaque
+                    ? "<alpha=#FF>♥ "
+                    : "<alpha=#80>♥ "
+            );
+        }
+
+        builder.Append("<alpha=#FF>");
+
+        return builder.ToString();
     }
 
     string FormatLifeValue(float value)
@@ -533,7 +725,9 @@ public void SetHpVisible(bool visible)
     {
         damageObject.SetActive(true);
 
-        yield return new WaitForSeconds(damageObjectActiveTime);
+        yield return new WaitForSecondsRealtime(
+            damageObjectActiveTime
+        );
 
         damageObject.SetActive(false);
     }
@@ -550,10 +744,16 @@ public void SetHpVisible(bool visible)
             tenkokuDynamicSky.SetActive(false);
         }
 
+        // 左上の通常ライフ表示を消す
+        SetHpVisible(false);
+
         if (goalText != null)
         {
             goalText.SetActive(true);
         }
+
+        // ゴール画面用のライフ内容を更新
+        UpdateGoalLifeText();
 
         if (tutorialAmbientSource != null)
         {
@@ -627,15 +827,32 @@ public void SetHpVisible(bool visible)
 
     void GameOver()
     {
+        if (isGameOver)
+        {
+            return;
+        }
+
         isGameOver = true;
+
         if (gameOverText != null)
         {
             gameOverText.SetActive(true);
         }
 
-        Debug.Log("GAME OVER");
+        if (tutorialAmbientSource != null)
+        {
+            tutorialAmbientSource.Stop();
+        }
+
+        waitingForGoalRestart = true;
+        returnedToTitleAfterGoal = false;
+        goalEnteredAt = Time.unscaledTime;
+
+        MagicCarpetGameFlow.FadeOutBgm();
 
         Time.timeScale = 0f;
+
+        Debug.Log("GAME OVER");
     }
 
     void PlayHitSound(GameObject bulletRoot)

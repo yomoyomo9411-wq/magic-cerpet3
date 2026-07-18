@@ -57,7 +57,7 @@ public class MagicCarpetPoseController : MonoBehaviour
     private int missingBrightPointFrames;
     private Vector2? lastBrightPoint;
     private float lastCircleClassificationRequest;
-    private bool circleClassificationInFlight;
+    private volatile bool circleClassificationInFlight;
     private string pendingCircleClassification;
     private string circleResultLabel;
     private bool circleResultIsCircle;
@@ -565,15 +565,69 @@ public class MagicCarpetPoseController : MonoBehaviour
             return;
         }
 
-        // 新しい検知なので、前回の結果をリセットする
         instance.lastProcessedCircleResult = null;
         instance.pendingCircleClassification = null;
         instance.nextCirclePollTime = 0f;
 
-        instance.SendCircleClassifierCommand("start");
+        // start通信が完了するまでstatus通信を止める
+        instance.circleClassificationInFlight = true;
+
+        _ = Task.Run(() =>
+            instance.SendCircleDetectionStartRequest()
+        );
     }
 
-    public static void CancelCircleDetection()
+    private void SendCircleDetectionStartRequest()
+    {
+        try
+        {
+            using var client = new TcpClient();
+
+            var connectTask =
+                client.ConnectAsync(
+                    "127.0.0.1",
+                    CircleClassifierPort
+                );
+
+            if (!connectTask.Wait(500))
+            {
+                return;
+            }
+
+            using var stream = client.GetStream();
+            stream.ReadTimeout = 500;
+
+            var request =
+                Encoding.UTF8.GetBytes(
+                    "{\"command\":\"start\"}\n"
+                );
+
+            stream.Write(
+                request,
+                0,
+                request.Length
+            );
+
+            // Pythonがstartを処理した後の応答を受け取る。
+            // この応答自体は判定結果として使用しない。
+            var response = new byte[1024];
+            stream.Read(
+                response,
+                0,
+                response.Length
+            );
+        }
+        catch
+        {
+            // Python未起動時は無視
+        }
+        finally
+        {
+            circleClassificationInFlight = false;
+            nextCirclePollTime = 0f;
+        }
+    }
+        public static void CancelCircleDetection()
     {
         if (instance == null)
         {
@@ -708,7 +762,7 @@ public class MagicCarpetPoseController : MonoBehaviour
         circleResultProbability = ExtractCircleProbability(normalized);
         circleResultLabel = circleResultIsCircle ? "CIRCLE" : "OTHER";
         circleResultVisibleUntil = Time.unscaledTime + 2f;
-        var acceptedCircle = circleResultIsCircle && circleResultProbability >= 0.5f;
+        var acceptedCircle = circleResultIsCircle;
         if (MagicCarpetGameFlow.IsCircleChallengeActive)
         {
             if (!acceptedCircle)

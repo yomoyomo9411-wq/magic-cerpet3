@@ -315,13 +315,15 @@ public class MagicCarpetGameFlow : MonoBehaviour
         {
             if (waitingForCircleChallenge)
             {
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                if (Input.GetKeyDown(KeyCode.Return) ||
+    Input.GetKeyDown(KeyCode.KeypadEnter))
                 {
                     SkipCircleChallenge();
+                    return;
                 }
 
                 if (!circleChallengeDetectionStarted
-    && Time.unscaledTime >= circleChallengeAcceptResultsAt)
+                    && Time.unscaledTime >= circleChallengeAcceptResultsAt)
                 {
                     circleChallengeDetectionStarted = true;
 
@@ -350,12 +352,15 @@ public class MagicCarpetGameFlow : MonoBehaviour
             return;
         }
 
-        if (showingTutorialResult && Time.unscaledTime >= tutorialResultEndsAt)
+        if (showingTutorialResult &&
+    Time.unscaledTime >= tutorialResultEndsAt)
         {
             showingTutorialResult = false;
 
-                ShowOnly(null);
+            // 次の球の成功判定を受け付ける
+            tutorialFailureBlocksSuccess = false;
 
+            ShowOnly(null);
             Time.timeScale = 1f;
         }
 
@@ -621,8 +626,10 @@ public class MagicCarpetGameFlow : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-    private IEnumerator ShowCircleFailureRoutine(bool finishAfterDisplay)
+    private IEnumerator ShowCircleFailureRoutine(
+    bool finishAfterDisplay)
     {
+        // 判定中表示を消して失敗表示
         ShowOnly(failureObject);
 
         yield return new WaitForSecondsRealtime(
@@ -640,6 +647,8 @@ public class MagicCarpetGameFlow : MonoBehaviour
             circleChallengeAcceptResultsAt = 0f;
             pendingCircleChallengeShieldScore = 0;
 
+            MagicCarpetPoseController.CancelCircleDetection();
+
             if (!mainGameStarted)
             {
                 canCheckMainStart = true;
@@ -649,6 +658,16 @@ public class MagicCarpetGameFlow : MonoBehaviour
             Time.timeScale = 1f;
             yield break;
         }
+
+        // 1回目・2回目の失敗後は、
+        // Pythonの次の判定を待つ表示に戻す
+        ShowOnly(circleTestObject);
+
+        circleChallengeAcceptResultsAt =
+            Time.unscaledTime;
+
+        // Python側は同じstart処理の中で
+        // 次の試行へ進むため、ここではStartCircleDetectionしない
     }
 
     private bool IsResultLocked()
@@ -765,6 +784,15 @@ public class MagicCarpetGameFlow : MonoBehaviour
         waitingAtTitleScreen = false;
 
         ResetSpawners();
+        var carpetMove =
+    player != null
+        ? player.GetComponent<CarpetMove>()
+        : null;
+
+        if (carpetMove != null)
+        {
+            carpetMove.ResetForNextRun();
+        }
         ShowOnly(practiceObject);
         Time.timeScale = 1f;
         BeginTutorialIntro();
@@ -782,16 +810,16 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
     private void ClearActiveBullets()
     {
-        foreach (var sceneObject in Resources.FindObjectsOfTypeAll<GameObject>())
+        foreach (
+            var runtime in
+            FindObjectsByType<BallRuntimeController>(
+                FindObjectsSortMode.None
+            )
+        )
         {
-            if (!IsLoadedSceneObject(sceneObject))
+            if (runtime != null)
             {
-                continue;
-            }
-
-            if (sceneObject.GetComponent<BallRuntimeController>() != null || sceneObject.CompareTag("Bullet"))
-            {
-                Destroy(sceneObject);
+                Destroy(runtime.gameObject);
             }
         }
     }
