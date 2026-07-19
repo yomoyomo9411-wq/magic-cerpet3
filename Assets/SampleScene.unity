@@ -15435,7 +15435,7 @@ MonoBehaviour:
   - time: 7
     randomizeX: 1
     randomXMin: -7
-    randomXMax: 0
+    randomXMax: -2
     laneX: -7
     ballPrefab: {fileID: 2399905744993577638, guid: 34a346b7061d50d4c8bfc545cf65a3b7, type: 3}
     useHitSound2: 0
@@ -15449,7 +15449,7 @@ MonoBehaviour:
     useCircleChallenge: 0
   - time: 7
     randomizeX: 1
-    randomXMin: 0
+    randomXMin: 2
     randomXMax: 7
     laneX: -3
     ballPrefab: {fileID: 3763102626853687258, guid: 56fc3ec2ccd3ee44d9d6ea4e9fc16758, type: 3}
@@ -15470,10 +15470,10 @@ MonoBehaviour:
     ballPrefab: {fileID: 7941371659263660280, guid: 0efb4af7ce8019f49b33585c6f43307e, type: 3}
     useHitSound2: 1
     damage: 1
-    scale: 7
-    visualScale: {x: 7, y: 7, z: 7}
+    scale: 5
+    visualScale: {x: 5, y: 5, z: 5}
     visualRotation: {x: 0, y: 180, z: 0}
-    visualOffset: {x: 0, y: -60, z: 0}
+    visualOffset: {x: 0, y: -32, z: 0}
     speed: 20
     pauseSecondsOnSpawn: 0
     useCircleChallenge: 0
@@ -15540,7 +15540,7 @@ MonoBehaviour:
   - time: 30
     randomizeX: 1
     randomXMin: -6
-    randomXMax: 0
+    randomXMax: -2
     laneX: -6
     ballPrefab: {fileID: 3763102626853687258, guid: 56fc3ec2ccd3ee44d9d6ea4e9fc16758, type: 3}
     useHitSound2: 0
@@ -15553,9 +15553,9 @@ MonoBehaviour:
     pauseSecondsOnSpawn: 0
     useCircleChallenge: 0
   - time: 30
-    randomizeX: 0
-    randomXMin: -6
-    randomXMax: 0
+    randomizeX: 1
+    randomXMin: 2
+    randomXMax: 6
     laneX: -2
     ballPrefab: {fileID: 5118648124693649256, guid: ddb210a23e7b76042b458c3c8a1b936e, type: 3}
     useHitSound2: 0
@@ -15568,9 +15568,9 @@ MonoBehaviour:
     pauseSecondsOnSpawn: 0
     useCircleChallenge: 0
   - time: 35
-    randomizeX: 0
-    randomXMin: -8
-    randomXMax: 8
+    randomizeX: 1
+    randomXMin: -7
+    randomXMax: 7
     laneX: 7
     ballPrefab: {fileID: 3699804865872804591, guid: c4dec736a96e99449b1b047e10f87465, type: 3}
     useHitSound2: 1
@@ -16517,7 +16517,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ShieldController
   showVisualEffect: 1
   alwaysVisible: 0
-  shieldDuration: 1.5
+  shieldDuration: 1.2
   sceneVisualEffectName: ShieldAuraPreview
   magicCircleResourceName: MagicCircleShield
   attachToMainCamera: 0
