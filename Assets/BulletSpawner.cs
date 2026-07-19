@@ -9,6 +9,15 @@ public class BallScheduleEntry
     [Tooltip("ゲーム開始から、この球を出現させるまでの秒数")]
     public float time = 10f;
 
+    [Tooltip("チェックするとX座標をランダムにします")]
+    public bool randomizeX;
+
+    [Tooltip("ランダムXの最小値")]
+    public float randomXMin = -8f;
+
+    [Tooltip("ランダムXの最大値")]
+    public float randomXMax = 8f;
+
     [Tooltip("球が通る横の位置。-8から8の範囲がおすすめ")]
     public float laneX = 0f;
 
@@ -262,7 +271,11 @@ public class BulletSpawner : MonoBehaviour
         {
             var activeSpawnDistance = GetSpawnDistance(isTutorial);
             var spawnPosition = player.position + player.forward * activeSpawnDistance;
-            spawnPosition.x = entry.laneX;
+            spawnPosition.x = entry.randomizeX
+    ? UnityEngine.Random.Range(
+        Mathf.Min(entry.randomXMin, entry.randomXMax),
+        Mathf.Max(entry.randomXMin, entry.randomXMax))
+    : entry.laneX;
             spawnPosition.y = player.position.y + spawnHeight;
 
             ball = new GameObject($"{prefab.name}_Obstacle");
