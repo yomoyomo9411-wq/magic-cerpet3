@@ -490,6 +490,10 @@ public void SetHpVisible(bool visible)
 
     public void ResetForNextRun()
     {
+
+        waitingForGoalRestart = false;
+        returnedToTitleAfterGoal = false;
+
         isGameOver = false;
         currentLife = Mathf.Max(0.1f, maxLife);
 

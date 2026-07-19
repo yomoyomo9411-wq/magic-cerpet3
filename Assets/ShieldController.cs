@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class ShieldController : MonoBehaviour
 {
@@ -22,8 +23,15 @@ public class ShieldController : MonoBehaviour
     [Tooltip("前方へ飛ばす魔法エフェクト。シーン内の非表示オブジェクトでも可")]
     public GameObject magicProjectileEffect;
 
+    [Tooltip("魔法弾が0から指定サイズまで大きくなる時間")]
+    [Min(0.01f)]
+    public float magicProjectileChargeSeconds = 0.5f;
+
     [Tooltip("モンスター命中時に表示する赤いエフェクト")]
     public GameObject monsterHitEffect;
+
+    [Tooltip("魔法弾の当たり判定半径")]
+    public float magicProjectileHitRadius = 2f;
 
     [Tooltip("魔法エフェクトの大きさ")]
     public Vector3 magicProjectileScale = Vector3.one;
@@ -58,6 +66,7 @@ public class ShieldController : MonoBehaviour
     public Vector3 monsterHitEffectOffset = Vector3.zero;
 
     private Coroutine magicAttackCoroutine;
+    private GameObject currentMagicProjectile;
 
     [Header("Shield Sound")]
     public AudioSource shieldSeSource;
@@ -122,16 +131,27 @@ public class ShieldController : MonoBehaviour
         var target =
     MagicCarpetGameFlow.GetCircleChallengeTarget();
 
-        if (target != null)
+        if (target == null)
         {
-            if (magicAttackCoroutine != null)
-            {
-                StopCoroutine(magicAttackCoroutine);
-            }
-
-            magicAttackCoroutine =
-                StartCoroutine(MagicAttackRoutine(target));
+            MagicCarpetGameFlow.CompleteMagicAttack();
+            magicAttackCoroutine = null;
+            return;
         }
+
+        if (magicAttackCoroutine != null)
+        {
+            StopCoroutine(magicAttackCoroutine);
+            magicAttackCoroutine = null;
+        }
+
+        if (currentMagicProjectile != null)
+        {
+            Destroy(currentMagicProjectile);
+            currentMagicProjectile = null;
+        }
+
+        magicAttackCoroutine =
+            StartCoroutine(MagicAttackRoutine(target));
     }
 
     private IEnumerator FlashMonsterRed(GameObject target, float duration)
@@ -497,92 +517,175 @@ public class ShieldController : MonoBehaviour
                 spawnPosition,
                 Quaternion.identity
             );
-
+        currentMagicProjectile = projectile;
         projectile.name = "Magic Projectile Runtime";
-        projectile.transform.localScale =
-    magicProjectileScale;
+
+        // 最初は大きさ0
+        projectile.transform.localScale = Vector3.zero;
+
         projectile.SetActive(true);
 
         SetParticleSystemsToUnscaled(projectile);
 
-        while (projectile != null &&
-               target != null)
+        // 0から指定サイズまで大きくする
+        float chargeDuration =
+            Mathf.Max(0.01f, magicProjectileChargeSeconds);
+
+        for (float elapsed = 0f;
+             elapsed < chargeDuration;
+             elapsed += Time.unscaledDeltaTime)
         {
-            Vector3 targetPosition =
-                GetTargetPosition(target);
-
-            projectile.transform.position =
-                Vector3.MoveTowards(
-                    projectile.transform.position,
-                    targetPosition,
-                    Mathf.Max(0.01f, magicProjectileSpeed)
-                    * Time.unscaledDeltaTime
-                );
-
-            Vector3 direction =
-                targetPosition -
-                projectile.transform.position;
-
-            if (direction.sqrMagnitude > 0.0001f)
-            {
-                projectile.transform.rotation =
-                    Quaternion.LookRotation(direction)
-                    *Quaternion.Euler(
-                       magicProjectileRotationOffset
-                     );
-            }
-
-            float distance =
-                Vector3.Distance(
-                    projectile.transform.position,
-                    targetPosition
-                );
-
-            if (distance <=
-                Mathf.Max(0.01f, magicHitDistance))
+            if (projectile == null || target == null)
             {
                 break;
             }
 
+            float t = Mathf.Clamp01(
+                elapsed / chargeDuration
+            );
+
+            // 最初ゆっくり、最後に勢いよく完成サイズになる
+            t = Mathf.SmoothStep(0f, 1f, t);
+
+            projectile.transform.localScale =
+                Vector3.Lerp(
+                    Vector3.zero,
+                    magicProjectileScale,
+                    t
+                );
+
             yield return null;
         }
 
-        if (target == null)
+        if (projectile != null)
+        {
+            projectile.transform.localScale =
+                magicProjectileScale;
+        }
+
+        if (projectile == null || target == null)
         {
             if (projectile != null)
             {
-                Destroy(
-                    projectile,
-                    Mathf.Max(0f, magicProjectileRemainSeconds)
-                );
+                Destroy(projectile);
             }
 
-            // 命中した敵本体を一瞬赤くする
-            StartCoroutine(
-                FlashMonsterRed(
-                    target,
-                    monsterHitEffectSeconds
-                )
-            );
-
-            // 赤い演出を見せる
-            yield return new WaitForSecondsRealtime(
-                Mathf.Max(0f, monsterHitEffectSeconds)
-            );
+            if (currentMagicProjectile == projectile)
+            {
+                currentMagicProjectile = null;
+            }
 
             MagicCarpetGameFlow.CompleteMagicAttack();
             magicAttackCoroutine = null;
             yield break;
         }
 
-        // 命中したモンスターを停止
-        var runtime =
-            target.GetComponent<BallRuntimeController>();
+        // 発射時点の敵の位置を1回だけ記録
+        Vector3 fixedDirection =
+    transform.forward.normalized;
 
-        if (runtime != null)
+        // 向きを最初に1回だけ設定
+        if (fixedDirection.sqrMagnitude > 0.0001f)
         {
-            runtime.StopAfterHit();
-            runtime.DisableAllColliders();
+            projectile.transform.rotation =
+                Quaternion.LookRotation(fixedDirection)
+                * Quaternion.Euler(
+                    magicProjectileRotationOffset
+                );
+        }
+
+        // 敵の位置まで直進
+
+        HashSet<GameObject> hitTargets =
+    new HashSet<GameObject>();
+
+        bool playerMovementResumed = false;
+
+        float flightElapsed = 0f;
+        float maxFlightSeconds =
+            Mathf.Max(0.01f, magicProjectileRemainSeconds);
+
+        while (projectile != null &&
+               flightElapsed < maxFlightSeconds)
+        {
+            Vector3 previousPosition =
+                projectile.transform.position;
+
+            Vector3 move =
+                fixedDirection
+                * Mathf.Max(0.01f, magicProjectileSpeed)
+                * Time.unscaledDeltaTime;
+
+            projectile.transform.position += move;
+
+            Physics.SyncTransforms();
+
+            if (move.sqrMagnitude > 0.0001f)
+            {
+                RaycastHit[] hits =
+                    Physics.SphereCastAll(
+                        previousPosition,
+                        Mathf.Max(
+                            0.01f,
+                            magicProjectileHitRadius
+                        ),
+                        fixedDirection,
+                        move.magnitude,
+                        ~0,
+                        QueryTriggerInteraction.Collide
+                    );
+
+                foreach (RaycastHit hit in hits)
+                {
+                    if (hit.collider == null)
+                    {
+                        continue;
+                    }
+
+                    // 魔法弾自身は無視
+                    if (hit.collider.transform.IsChildOf(
+                            projectile.transform))
+                    {
+                        continue;
+                    }
+
+                    BallRuntimeController hitRuntime =
+                        hit.collider.GetComponentInParent
+                            <BallRuntimeController>();
+
+                    if (hitRuntime == null)
+                    {
+                        continue;
+                    }
+
+                    GameObject monster =
+                        hitRuntime.gameObject;
+
+                    // 同じ敵を二重処理しない
+                    if (!hitTargets.Add(monster))
+                    {
+                        continue;
+                    }
+
+                    // 接触した敵を停止
+                    hitRuntime.StopAfterHit();
+                    hitRuntime.DisableAllColliders();
+
+                    StartCoroutine(
+                        HitAndDestroyMonster(monster)
+                    );
+
+                    // 最初の敵に命中した瞬間にプレイヤーの前進を再開
+                    if (!playerMovementResumed)
+                    {
+                        playerMovementResumed = true;
+                        MagicCarpetGameFlow.CompleteMagicAttack();
+                    }
+                }
+            }
+
+            flightElapsed += Time.unscaledDeltaTime;
+            yield return null;
         }
 
         if (projectile != null)
@@ -590,37 +693,95 @@ public class ShieldController : MonoBehaviour
             Destroy(projectile);
         }
 
-        // 赤い演出を見せる
-        yield return new WaitForSecondsRealtime(
-            Mathf.Max(0f, monsterHitEffectSeconds)
-        );
-
-        if (target != null)
+        if (currentMagicProjectile == projectile)
         {
-            Destroy(target);
+            currentMagicProjectile = null;
         }
 
-        // 命中した時点でゲーム進行を再開
-        MagicCarpetGameFlow.CompleteMagicAttack();
+        // 1体にも当たらなかった場合だけ硬直解除
+        if (!playerMovementResumed)
+        {
+            MagicCarpetGameFlow.CompleteMagicAttack();
+        }
 
         magicAttackCoroutine = null;
     }
 
+    private IEnumerator HitAndDestroyMonster(
+        GameObject monster)
+    {
+        if (monster == null)
+        {
+            yield break;
+        }
+
+        StartCoroutine(
+            FlashMonsterRed(
+                monster,
+                monsterHitEffectSeconds
+            )
+        );
+
+        yield return new WaitForSecondsRealtime(
+            Mathf.Max(0f, monsterHitEffectSeconds)
+        );
+
+        if (monster != null)
+        {
+            Destroy(monster);
+        }
+    }
+
+    private IEnumerator ContinueProjectileForward(
+    GameObject projectile,
+    Vector3 direction,
+    float duration)
+    {
+        float elapsed = 0f;
+        float speed =
+            Mathf.Max(0.01f, magicProjectileSpeed);
+
+        float moveDuration =
+            Mathf.Max(0f, duration);
+
+        while (projectile != null &&
+               elapsed < moveDuration)
+        {
+            projectile.transform.position +=
+                direction
+                * speed
+                * Time.unscaledDeltaTime;
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (projectile != null)
+        {
+            Destroy(projectile);
+        }
+
+        if (currentMagicProjectile == projectile)
+        {
+            currentMagicProjectile = null;
+        }
+    }
+
     private Vector3 GetTargetPosition(
-        GameObject target)
+    GameObject target)
     {
         if (target == null)
         {
             return Vector3.zero;
         }
 
-        var renderers =
+        Renderer[] renderers =
             target.GetComponentsInChildren<Renderer>(true);
 
         bool foundRenderer = false;
         Bounds combinedBounds = new Bounds();
 
-        foreach (var targetRenderer in renderers)
+        foreach (Renderer targetRenderer in renderers)
         {
             if (targetRenderer == null ||
                 !targetRenderer.enabled)

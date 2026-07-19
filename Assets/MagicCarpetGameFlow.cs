@@ -379,10 +379,22 @@ public class MagicCarpetGameFlow : MonoBehaviour
         // 最初はタイトル画面で待機
         waitingAtTitleScreen = true;
 
+        if (startButtonObject != null)
+        {
+            startButtonObject.SetActive(true);
+        }
+
         if (starfieldEffect != null)
         {
+            starfieldEffect.Stop();
             starfieldEffect.Reinit();
-            starfieldEffect.Play();
+            starfieldEffect.enabled = false;
+        }
+
+        if (bgmSource != null)
+        {
+            bgmSource.Stop();
+            bgmSource.time = 0f;
         }
 
         Time.timeScale = 0f;
@@ -423,15 +435,50 @@ public class MagicCarpetGameFlow : MonoBehaviour
         canCheckMainStart = false;
         mainGameStarted = false;
 
-        if (EventSystem.current != null &&
-     EventSystem.current.currentSelectedGameObject != null)
-        {
-            EventSystem.current.currentSelectedGameObject.SetActive(false);
-        }
-
         if (startButtonObject != null)
         {
             startButtonObject.SetActive(false);
+        }
+
+        var carpetMove = player != null
+    ? player.GetComponent<CarpetMove>()
+    : null;
+
+        if (carpetMove != null)
+        {
+            carpetMove.ResetForNextRun();
+        }
+
+        // シーン内の「startbutton」という名前のオブジェクトも確実に消す
+        foreach (GameObject obj in Resources.FindObjectsOfTypeAll<GameObject>())
+        {
+            if (obj == null ||
+                !obj.scene.IsValid() ||
+                !obj.scene.isLoaded)
+            {
+                continue;
+            }
+
+            if (obj.name.Equals(
+                    "startbutton",
+                    System.StringComparison.OrdinalIgnoreCase))
+            {
+                obj.SetActive(false);
+            }
+        }
+
+        if (starfieldEffect != null)
+        {
+            starfieldEffect.gameObject.SetActive(true);
+            starfieldEffect.Reinit();
+            starfieldEffect.Play();
+        }
+
+        if (bgmSource != null)
+        {
+            bgmSource.Stop();
+            bgmSource.time = 0f;
+            bgmSource.Play();
         }
 
         ShowOnly(practiceObject);
@@ -959,11 +1006,20 @@ public class MagicCarpetGameFlow : MonoBehaviour
         ClearActiveBullets();
         SetMainStartObjectsVisible(false);
         ShowOnly(titleObject);
+
         if (startButtonObject != null)
         {
             startButtonObject.SetActive(true);
+            startButtonObject.transform.SetAsLastSibling();
         }
 
+        if (starfieldEffect != null)
+        {
+            // 残っている粒子も消して、2周目タイトルでは非表示
+            starfieldEffect.Stop();
+            starfieldEffect.Reinit();
+            starfieldEffect.enabled = false;
+        }
         Time.timeScale = 0f;
 
         var carpetMove = player != null ? player.GetComponent<CarpetMove>() : null;
@@ -976,7 +1032,6 @@ public class MagicCarpetGameFlow : MonoBehaviour
         {
             bgmSource.Stop();
             bgmSource.time = 0f;
-            bgmSource.Play();
         }
 
         Debug.Log("Returned to title screen. Press Enter again to start.");
@@ -1012,6 +1067,29 @@ public class MagicCarpetGameFlow : MonoBehaviour
         {
             carpetMove.ResetForNextRun();
         }
+
+        // 2周目もスタート時にボタンを消す
+        if (startButtonObject != null)
+        {
+            startButtonObject.SetActive(false);
+        }
+
+        // 2周目もスタート時にStarfieldを表示・再生
+        if (starfieldEffect != null)
+        {
+            starfieldEffect.enabled = true;
+            starfieldEffect.Reinit();
+            starfieldEffect.Play();
+        }
+
+        // 2周目もスタート時にBGMを再生
+        if (bgmSource != null)
+        {
+            bgmSource.Stop();
+            bgmSource.time = 0f;
+            bgmSource.Play();
+        }
+
         ShowOnly(practiceObject);
         Time.timeScale = 1f;
         BeginTutorialIntro();
