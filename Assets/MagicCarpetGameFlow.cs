@@ -391,10 +391,22 @@ public class MagicCarpetGameFlow : MonoBehaviour
             starfieldEffect.enabled = false;
         }
 
+        // 本番曲はまだ流さない
         if (bgmSource != null)
         {
             bgmSource.Stop();
             bgmSource.time = 0f;
+        }
+
+        var carpetMove = player != null
+    ? player.GetComponent<CarpetMove>()
+    : null;
+
+        if (carpetMove != null &&
+            carpetMove.tutorialAmbientSource != null)
+        {
+            carpetMove.tutorialAmbientSource.Stop();
+            carpetMove.tutorialAmbientSource.time = 0f;
         }
 
         Time.timeScale = 0f;
@@ -474,11 +486,20 @@ public class MagicCarpetGameFlow : MonoBehaviour
             starfieldEffect.Play();
         }
 
+        // 本番曲はまだ流さない
         if (bgmSource != null)
         {
             bgmSource.Stop();
             bgmSource.time = 0f;
-            bgmSource.Play();
+        }
+
+        // チュートリアル曲を開始
+        if (carpetMove != null &&
+            carpetMove.tutorialAmbientSource != null)
+        {
+            carpetMove.tutorialAmbientSource.Stop();
+            carpetMove.tutorialAmbientSource.time = 0f;
+            carpetMove.tutorialAmbientSource.Play();
         }
 
         ShowOnly(practiceObject);
@@ -954,17 +975,35 @@ public class MagicCarpetGameFlow : MonoBehaviour
         mainGameStarted = true;
         waitingForMainStart = false;
         waitingAtTitleScreen = false;
+
         SetMainStartObjectsVisible(true);
         ShowOnly(null);
-        var carpetMove = player != null ? player.GetComponent<CarpetMove>() : null;
+
+        var carpetMove =
+            player != null
+                ? player.GetComponent<CarpetMove>()
+                : null;
+
         if (carpetMove != null)
         {
             carpetMove.SetHpVisible(true);
         }
+
         Time.timeScale = 1f;
 
-        if (bgmSource != null && !bgmSource.isPlaying)
+        // チュートリアル曲を停止
+        if (carpetMove != null &&
+            carpetMove.tutorialAmbientSource != null)
         {
+            carpetMove.tutorialAmbientSource.Stop();
+            carpetMove.tutorialAmbientSource.time = 0f;
+        }
+
+        // 本番曲を最初から再生
+        if (bgmSource != null)
+        {
+            bgmSource.Stop();
+            bgmSource.time = 0f;
             bgmSource.Play();
         }
 
@@ -1022,10 +1061,20 @@ public class MagicCarpetGameFlow : MonoBehaviour
         }
         Time.timeScale = 0f;
 
-        var carpetMove = player != null ? player.GetComponent<CarpetMove>() : null;
+        var carpetMove = player != null
+    ? player.GetComponent<CarpetMove>()
+    : null;
+
         if (carpetMove != null)
         {
             carpetMove.SetHpVisible(false);
+        }
+
+        if (carpetMove != null &&
+            carpetMove.tutorialAmbientSource != null)
+        {
+            carpetMove.tutorialAmbientSource.Stop();
+            carpetMove.tutorialAmbientSource.time = 0f;
         }
 
         if (bgmSource != null)
@@ -1083,11 +1132,20 @@ public class MagicCarpetGameFlow : MonoBehaviour
         }
 
         // 2周目もスタート時にBGMを再生
+        // 本番曲はまだ流さない
         if (bgmSource != null)
         {
             bgmSource.Stop();
             bgmSource.time = 0f;
-            bgmSource.Play();
+        }
+
+        // 2周目もチュートリアル曲を再生
+        if (carpetMove != null &&
+            carpetMove.tutorialAmbientSource != null)
+        {
+            carpetMove.tutorialAmbientSource.Stop();
+            carpetMove.tutorialAmbientSource.time = 0f;
+            carpetMove.tutorialAmbientSource.Play();
         }
 
         ShowOnly(practiceObject);

@@ -60,11 +60,22 @@ public class CameraShake : MonoBehaviour
 
             transform.localPosition = originalPosition + new Vector3(x, y, 0f);
 
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
         transform.localPosition = originalPosition;
         shakeCoroutine = null;
+    }
+
+    public void ResetShake()
+    {
+        if (shakeCoroutine != null)
+        {
+            StopCoroutine(shakeCoroutine);
+            shakeCoroutine = null;
+        }
+
+        transform.localPosition = originalPosition;
     }
 }

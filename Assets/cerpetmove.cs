@@ -14,9 +14,11 @@ public class CarpetMove : MonoBehaviour
     public float minX = -8f;
     public float maxX = 8f;
     public float autoReturnToTitleSeconds = 15f;
-    public AudioSource tutorialAmbientSource;
-    private float goalEnteredAt;
+    public float gameOverReturnToTitleSeconds = 5f;
 
+    private float goalEnteredAt;
+    private bool endedByGameOver;
+    public AudioSource tutorialAmbientSource;
 
     public ShoulderInput shoulderInput;
     public float shoulderPower = 10f;
@@ -490,9 +492,14 @@ public void SetHpVisible(bool visible)
 
     public void ResetForNextRun()
     {
-
         waitingForGoalRestart = false;
         returnedToTitleAfterGoal = false;
+        endedByGameOver = false;
+
+        if (cameraShakeScript != null)
+        {
+            cameraShakeScript.ResetShake();
+        }
 
         isGameOver = false;
         currentLife = Mathf.Max(0.1f, maxLife);
@@ -742,6 +749,8 @@ public void SetHpVisible(bool visible)
             return;
         }
 
+        endedByGameOver = false;
+
         if (tenkokuDynamicSky != null)
         {
             tenkokuDynamicSky.SetActive(false);
@@ -777,7 +786,12 @@ public void SetHpVisible(bool visible)
 
     void HandleGoalRestartInput()
     {
-        if (!returnedToTitleAfterGoal && Time.unscaledTime >= goalEnteredAt + autoReturnToTitleSeconds)
+        float returnDelay = endedByGameOver
+    ? gameOverReturnToTitleSeconds
+    : autoReturnToTitleSeconds;
+
+        if (!returnedToTitleAfterGoal &&
+            Time.unscaledTime >= goalEnteredAt + returnDelay)
         {
             ReturnToTitleAfterGoal();
             return;
@@ -804,6 +818,11 @@ public void SetHpVisible(bool visible)
         returnedToTitleAfterGoal = true;
         isGameOver = false;
         currentLife = Mathf.Max(0.1f, maxLife);
+
+        if (cameraShakeScript != null)
+        {
+            cameraShakeScript.ResetShake();
+        }
 
         if (lifeText != null || heartsText != null)
         {
@@ -834,7 +853,7 @@ public void SetHpVisible(bool visible)
         {
             return;
         }
-
+        endedByGameOver = true;
         isGameOver = true;
 
         if (gameOverText != null)

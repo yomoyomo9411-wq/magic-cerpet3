@@ -5,9 +5,18 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene_backup.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/SampleScene.unity
+    guid: 43fa6a553d7cfae4fab053c124136953
+  - enabled: 1
+    path: Assets/ALP_Assets/GrassFlowersFREE/Demo/DemoGrassFlowers.unity
+    guid: 679e28dd92e786342b7944447228f70c
+  - enabled: 1
+    path: Assets/castle_assets/Medieval Castle/Scenes/Demo.unity
+    guid: 4e0b2b51b6662be4f9d98e95645aff16
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
