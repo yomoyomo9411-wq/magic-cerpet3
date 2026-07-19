@@ -403,7 +403,7 @@ public void SetHpVisible(bool visible)
 
         if (cameraShakeScript != null)
         {
-            cameraShakeScript.Shake(intensity);
+            cameraShakeScript.ShakeTutorial(0.8f, 0.6f);
         }
     }
 

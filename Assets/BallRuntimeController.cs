@@ -75,9 +75,7 @@ public class BallRuntimeController : MonoBehaviour
         }
 
         // プレイヤーとの接触判定
-        if (!hitReported &&
-            IsNearPlayerForTouchCheck() &&
-            IsTouchingPlayer())
+        if (!hitReported && IsTouchingPlayer())
         {
             hitReported = true;
             passReported = true;
