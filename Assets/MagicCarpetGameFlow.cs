@@ -20,7 +20,10 @@ public class MagicCarpetGameFlow : MonoBehaviour
 
     [Header("Audio")]
     public AudioSource bgmSource;
+    public AudioSource countdownBgmSource;
     public float bgmFadeOutSeconds = 4f;
+
+    private bool countdownBgmPlayed;
 
     [Header("Title Visual Effect")]
     public VisualEffect starfieldEffect;
@@ -606,6 +609,23 @@ public class MagicCarpetGameFlow : MonoBehaviour
             return;
         }
 
+        float remainingSeconds =
+    autoMainStartAt - Time.unscaledTime;
+
+        if (!countdownBgmPlayed &&
+            remainingSeconds <= 3f &&
+            remainingSeconds > 0f)
+        {
+            countdownBgmPlayed = true;
+
+            if (countdownBgmSource != null)
+            {
+                countdownBgmSource.Stop();
+                countdownBgmSource.time = 0f;
+                countdownBgmSource.Play();
+            }
+        }
+
         if (Input.GetKeyDown(startKey)
             || Input.GetKeyDown(KeyCode.KeypadEnter)
             || Input.GetKeyDown(KeyCode.Space)
@@ -625,8 +645,22 @@ public class MagicCarpetGameFlow : MonoBehaviour
         pendingCircleChallengeShieldScore = 0;
         tutorialFailureBlocksSuccess = false;
         waitingForMainStart = true;
+        countdownBgmPlayed = false;
         SetMainStartObjectsVisible(true);
         ShowOnly(honbanObject);
+
+        var carpetMove = player != null
+            ? player.GetComponent<CarpetMove>()
+            : null;
+
+        if (carpetMove != null &&
+            carpetMove.tutorialAmbientSource != null)
+        {
+            StartCoroutine(
+                FadeOutAudioRoutine(carpetMove.tutorialAmbientSource)
+            );
+        }
+
         Time.timeScale = 0f;
         autoMainStartAt = Time.unscaledTime + autoMainStartSeconds;
 
@@ -1024,6 +1058,14 @@ public class MagicCarpetGameFlow : MonoBehaviour
         tutorialFailureBlocksSuccess = false;
         tutorialResultLockEndsAt = 0f;
         waitingAtTitleScreen = true;
+
+        countdownBgmPlayed = false;
+
+        if (countdownBgmSource != null)
+        {
+            countdownBgmSource.Stop();
+            countdownBgmSource.time = 0f;
+        }
 
         if (player != null)
         {
@@ -1493,29 +1535,45 @@ public class MagicCarpetGameFlow : MonoBehaviour
     }
     public static void FadeOutBgm()
     {
-        if (instance != null)
+        if (instance == null || instance.bgmSource == null)
         {
-            instance.StartCoroutine(instance.FadeOutBgmRoutine());
+            return;
         }
+
+        instance.StartCoroutine(
+            instance.FadeOutAudioRoutine(instance.bgmSource)
+        );
     }
 
-    private IEnumerator FadeOutBgmRoutine()
+    private IEnumerator FadeOutAudioRoutine(AudioSource source)
     {
-        if (bgmSource == null)
+        if (source == null)
         {
             yield break;
         }
 
-        float startVolume = bgmSource.volume;
+        float startVolume = source.volume;
+        float fadeSeconds = Mathf.Max(0.01f, bgmFadeOutSeconds);
+        float elapsed = 0f;
 
-        while (bgmSource.volume > 0f)
+        while (elapsed < fadeSeconds)
         {
-            bgmSource.volume -= startVolume * Time.unscaledDeltaTime / bgmFadeOutSeconds;
+            elapsed += Time.unscaledDeltaTime;
+
+            source.volume = Mathf.Lerp(
+                startVolume,
+                0f,
+                Mathf.Clamp01(elapsed / fadeSeconds)
+            );
+
             yield return null;
         }
 
-        bgmSource.Stop();
-        bgmSource.volume = startVolume;
+        source.volume = 0f;
+        source.Stop();
+
+        // 次回再生時のために元の音量へ戻す
+        source.volume = startVolume;
     }
 }
 

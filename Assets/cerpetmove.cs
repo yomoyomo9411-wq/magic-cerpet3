@@ -13,7 +13,7 @@ public class CarpetMove : MonoBehaviour
 
     public float minX = -8f;
     public float maxX = 8f;
-    public float autoReturnToTitleSeconds = 15f;
+    public float autoReturnToTitleSeconds = 20f;
     public float gameOverReturnToTitleSeconds = 5f;
 
     private float goalEnteredAt;
@@ -29,6 +29,10 @@ public class CarpetMove : MonoBehaviour
     public AudioSource seSource;
     public AudioClip hitSound1;
     public AudioClip hitSound2;
+
+    [Header("Goal Sound")]
+    public AudioSource goalAudioSource;
+    public AudioClip goalClip;
 
     [Header("Life Settings")]
     public float maxLife = 10f;
@@ -766,6 +770,11 @@ public void SetHpVisible(bool visible)
 
         // ゴール画面用のライフ内容を更新
         UpdateGoalLifeText();
+
+        if (goalAudioSource != null && goalClip != null)
+        {
+            goalAudioSource.PlayOneShot(goalClip);
+        }
 
         if (tutorialAmbientSource != null)
         {

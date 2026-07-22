@@ -72,6 +72,13 @@ public class ShieldController : MonoBehaviour
     public AudioSource shieldSeSource;
     public AudioClip shieldActivateSound;
 
+    [Header("Magic Attack Sound")]
+    public AudioSource magicSeSource;
+
+    public AudioClip magicChargeSound;   // 球が大きくなる
+    public AudioClip magicShotSound;     // 発射
+    public AudioClip magicHitSound;      // モンスター命中
+
     public bool IsShieldActive => alwaysVisible || Time.unscaledTime < shieldActiveUntil;
 
     private float shieldActiveUntil;
@@ -525,6 +532,11 @@ public class ShieldController : MonoBehaviour
 
         projectile.SetActive(true);
 
+        if (magicSeSource != null && magicChargeSound != null)
+        {
+            magicSeSource.PlayOneShot(magicChargeSound);
+        }
+
         SetParticleSystemsToUnscaled(projectile);
 
         // 0から指定サイズまで大きくする
@@ -553,7 +565,6 @@ public class ShieldController : MonoBehaviour
                     magicProjectileScale,
                     t
                 );
-
             yield return null;
         }
 
@@ -561,6 +572,11 @@ public class ShieldController : MonoBehaviour
         {
             projectile.transform.localScale =
                 magicProjectileScale;
+        }
+
+        if (magicSeSource != null && magicShotSound != null)
+        {
+            magicSeSource.PlayOneShot(magicShotSound);
         }
 
         if (projectile == null || target == null)
@@ -670,6 +686,11 @@ public class ShieldController : MonoBehaviour
                     // 接触した敵を停止
                     hitRuntime.StopAfterHit();
                     hitRuntime.DisableAllColliders();
+
+                    if (magicSeSource != null && magicHitSound != null)
+                    {
+                        magicSeSource.PlayOneShot(magicHitSound);
+                    }
 
                     StartCoroutine(
                         HitAndDestroyMonster(monster)
