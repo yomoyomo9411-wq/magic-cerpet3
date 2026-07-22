@@ -52,6 +52,43 @@ public class MagicCarpetPoseController : MonoBehaviour
     private RectTransform brightPointMarker;
     private Canvas poseCameraPreviewCanvas;
     private RawImage poseCameraPreviewImage;
+    private RectTransform poseLandmarkLayer;
+
+    private readonly List<RectTransform> poseLandmarkDots =
+        new List<RectTransform>();
+
+    private readonly List<RectTransform> poseLandmarkLines =
+        new List<RectTransform>();
+
+    private static readonly int[,] PoseConnections =
+    {
+    // 顔
+    { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 7 },
+    { 0, 4 }, { 4, 5 }, { 5, 6 }, { 6, 8 },
+    { 9, 10 },
+
+    // 上半身
+    { 11, 12 },
+    { 11, 13 }, { 13, 15 },
+    { 12, 14 }, { 14, 16 },
+
+    // 手
+    { 15, 17 }, { 15, 19 }, { 15, 21 },
+    { 16, 18 }, { 16, 20 }, { 16, 22 },
+
+    // 胴体
+    { 11, 23 },
+    { 12, 24 },
+    { 23, 24 },
+
+    // 脚
+    { 23, 25 }, { 25, 27 },
+    { 24, 26 }, { 26, 28 },
+
+    // 足
+    { 27, 29 }, { 29, 31 }, { 27, 31 },
+    { 28, 30 }, { 30, 32 }, { 28, 32 }
+};
     private Camera gameCamera;
     private int brightPointFrameCounter;
     private int missingBrightPointFrames;
@@ -173,22 +210,31 @@ public class MagicCarpetPoseController : MonoBehaviour
             var image = textureFrame.BuildCPUImage();
             textureFrame.Release();
 
-            if (poseLandmarker.TryDetectForVideo(image, Time.frameCount, processingOptions, ref result))
+            if (poseLandmarker.TryDetectForVideo(
+    image,
+    Time.frameCount,
+    processingOptions,
+    ref result))
             {
                 ForwardShoulders(result);
+                UpdatePoseLandmarkPreview(result);
             }
             else
             {
                 shoulderInput.LostBody();
+                HidePoseLandmarkPreview();
             }
 
             DisposeMasks(result);
         }
     }
 
+
     private void CreatePoseCameraPreview()
     {
-        if (!showPoseCameraPreview || webCamTexture == null || poseCameraPreviewCanvas != null)
+        if (!showPoseCameraPreview ||
+            webCamTexture == null ||
+            poseCameraPreviewCanvas != null)
         {
             return;
         }
@@ -199,30 +245,220 @@ public class MagicCarpetPoseController : MonoBehaviour
             typeof(Canvas),
             typeof(CanvasScaler),
             typeof(GraphicRaycaster));
+
         DontDestroyOnLoad(canvasObject);
 
         poseCameraPreviewCanvas = canvasObject.GetComponent<Canvas>();
         poseCameraPreviewCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        poseCameraPreviewCanvas.sortingOrder = 10;
+
+        // ゲーム画面より確実に手前へ表示
+        poseCameraPreviewCanvas.sortingOrder = 1000;
 
         var scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        var previewObject = new GameObject("Pose Camera Image", typeof(RectTransform), typeof(RawImage));
+        // RealSense映像
+        var previewObject = new GameObject(
+            "Pose Camera Image",
+            typeof(RectTransform),
+            typeof(RawImage));
+
         previewObject.transform.SetParent(canvasObject.transform, false);
 
-        var rect = previewObject.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(1f - poseCameraPreviewWidthRatio, 0f);
-        rect.anchorMax = Vector2.one;
-        rect.pivot = new Vector2(1f, 0.5f);
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+        var previewRect = previewObject.GetComponent<RectTransform>();
+        previewRect.anchorMin = Vector2.zero;
+        previewRect.anchorMax = Vector2.one;
+        previewRect.offsetMin = Vector2.zero;
+        previewRect.offsetMax = Vector2.zero;
 
         poseCameraPreviewImage = previewObject.GetComponent<RawImage>();
         poseCameraPreviewImage.texture = webCamTexture;
         poseCameraPreviewImage.raycastTarget = false;
+
+        // 骨格描画用レイヤー
+        var landmarkLayerObject = new GameObject(
+            "Pose Landmark Layer",
+            typeof(RectTransform));
+
+        landmarkLayerObject.transform.SetParent(canvasObject.transform, false);
+
+        poseLandmarkLayer =
+            landmarkLayerObject.GetComponent<RectTransform>();
+
+        poseLandmarkLayer.anchorMin = Vector2.zero;
+        poseLandmarkLayer.anchorMax = Vector2.one;
+        poseLandmarkLayer.offsetMin = Vector2.zero;
+        poseLandmarkLayer.offsetMax = Vector2.zero;
+
+        CreatePoseLandmarkObjects();
+    }
+
+    private void CreatePoseLandmarkObjects()
+    {
+        if (poseLandmarkLayer == null)
+        {
+            return;
+        }
+
+        // MediaPipe Poseの33点
+        for (var i = 0; i < 33; i++)
+        {
+            var dotObject = new GameObject(
+                $"Pose Point {i}",
+                typeof(RectTransform),
+                typeof(UnityEngine.UI.Image));
+
+            dotObject.transform.SetParent(poseLandmarkLayer, false);
+
+            var rect = dotObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(14f, 14f);
+
+            var image =
+                dotObject.GetComponent<UnityEngine.UI.Image>();
+
+            image.color = UnityEngine.Color.green;
+            image.raycastTarget = false;
+
+            dotObject.SetActive(false);
+            poseLandmarkDots.Add(rect);
+        }
+
+        // 骨格を結ぶ線
+        var connectionCount = PoseConnections.GetLength(0);
+
+        for (var i = 0; i < connectionCount; i++)
+        {
+            var lineObject = new GameObject(
+                $"Pose Line {i}",
+                typeof(RectTransform),
+                typeof(UnityEngine.UI.Image));
+
+            lineObject.transform.SetParent(poseLandmarkLayer, false);
+
+            var rect = lineObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0f, 0.5f);
+
+            var image =
+                lineObject.GetComponent<UnityEngine.UI.Image>();
+
+            image.color = UnityEngine.Color.green;
+            image.raycastTarget = false;
+
+            lineObject.SetActive(false);
+            poseLandmarkLines.Add(rect);
+        }
+
+        // 点を線より手前に表示
+        foreach (var dot in poseLandmarkDots)
+        {
+            dot.SetAsLastSibling();
+        }
+    }
+
+    private void UpdatePoseLandmarkPreview(
+    PoseLandmarkerResult result)
+    {
+        if (!showPoseCameraPreview ||
+            poseLandmarkLayer == null ||
+            result.poseLandmarks == null ||
+            result.poseLandmarks.Count == 0)
+        {
+            HidePoseLandmarkPreview();
+            return;
+        }
+
+        var landmarks = result.poseLandmarks[0].landmarks;
+
+        if (landmarks == null || landmarks.Count < 33)
+        {
+            HidePoseLandmarkPreview();
+            return;
+        }
+
+        var layerSize = poseLandmarkLayer.rect.size;
+
+        // 点を更新
+        for (var i = 0; i < poseLandmarkDots.Count; i++)
+        {
+            var landmark = landmarks[i];
+            var dot = poseLandmarkDots[i];
+
+            /*
+             * MediaPipe:
+             * 左上が(0,0)、右下が(1,1)
+             *
+             * Unity UI:
+             * 左下が(0,0)
+             */
+            var position = new Vector2(
+                landmark.x * layerSize.x,
+                landmark.y * layerSize.y);
+
+            dot.anchoredPosition = position;
+            dot.gameObject.SetActive(true);
+        }
+        // 線を更新
+        var connectionCount = PoseConnections.GetLength(0);
+
+        for (var i = 0; i < connectionCount; i++)
+        {
+            var startIndex = PoseConnections[i, 0];
+            var endIndex = PoseConnections[i, 1];
+
+            var startPosition =
+                poseLandmarkDots[startIndex].anchoredPosition;
+
+            var endPosition =
+                poseLandmarkDots[endIndex].anchoredPosition;
+
+            UpdatePoseLine(
+                poseLandmarkLines[i],
+                startPosition,
+                endPosition);
+        }
+    }
+
+    private void UpdatePoseLine(
+    RectTransform line,
+    Vector2 start,
+    Vector2 end)
+    {
+        var difference = end - start;
+        var distance = difference.magnitude;
+        var angle = Mathf.Atan2(
+            difference.y,
+            difference.x) * Mathf.Rad2Deg;
+
+        line.anchoredPosition = start;
+        line.sizeDelta = new Vector2(distance, 5f);
+        line.localRotation = Quaternion.Euler(0f, 0f, angle);
+        line.gameObject.SetActive(true);
+    }
+
+    private void HidePoseLandmarkPreview()
+    {
+        foreach (var dot in poseLandmarkDots)
+        {
+            if (dot != null)
+            {
+                dot.gameObject.SetActive(false);
+            }
+        }
+
+        foreach (var line in poseLandmarkLines)
+        {
+            if (line != null)
+            {
+                line.gameObject.SetActive(false);
+            }
+        }
     }
 
     private void ForwardShoulders(PoseLandmarkerResult result)

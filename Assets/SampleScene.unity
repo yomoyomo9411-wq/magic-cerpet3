@@ -16431,6 +16431,7 @@ MonoBehaviour:
   minX: -8
   maxX: 8
   autoReturnToTitleSeconds: 30
+  gameOverReturnToTitleSeconds: 5
   tutorialAmbientSource: {fileID: 727687514}
   shoulderInput: {fileID: 0}
   shoulderPower: 5
